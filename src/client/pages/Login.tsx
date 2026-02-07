@@ -65,7 +65,12 @@ export default function Login() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Password</Label>
+                <Link to="/forgot-password" className="text-xs text-primary hover:underline">
+                  Forgot password?
+                </Link>
+              </div>
               <Input
                 id="password"
                 type="password"
@@ -80,7 +85,16 @@ export default function Login() {
             </Button>
           </form>
 
-          <div className="mt-6 border-t pt-6">
+          <div className="mt-6 text-center">
+            <p className="text-sm text-muted-foreground">
+              Don't have an account?{' '}
+              <Link to="/signup" className="text-primary hover:underline font-medium">
+                Sign up
+              </Link>
+            </p>
+          </div>
+
+          <div className="mt-6 border-t pt-6 space-y-4">
             <p className="text-xs text-muted-foreground text-center mb-3">Demo Accounts:</p>
             <div className="space-y-2 text-xs">
               <div className="bg-gray-100 p-2 rounded">

@@ -22,16 +22,22 @@ export default function Layout({ children }: LayoutProps) {
   };
 
   const navItems = [
-    { path: '/', icon: Home, label: 'Dashboard' },
-    { path: '/subscriptions', icon: Package, label: 'Subscriptions' },
-    { path: '/invoices', icon: FileText, label: 'Invoices' },
+    { path: '/', icon: Home, label: 'Dashboard', roles: ['ADMIN', 'INTERNAL', 'PORTAL'] },
+    { path: '/products', icon: Package, label: 'Products', roles: ['ADMIN'] },
+    { path: '/subscriptions', icon: FileText, label: 'Subscriptions', roles: ['ADMIN', 'INTERNAL', 'PORTAL'] },
+    { path: '/invoices', icon: CreditCard, label: 'Invoices', roles: ['ADMIN', 'INTERNAL', 'PORTAL'] },
   ];
+
+  const visibleNavItems = navItems.filter(item => 
+    !item.roles || item.roles.includes(user?.role || '')
+  );
 
   const NavLinks = ({ mobile = false }: { mobile?: boolean }) => (
     <>
-      {navItems.map((item) => {
+      {visibleNavItems.map((item) => {
         const Icon = item.icon;
-        const isActive = location.pathname === item.path;
+        const isActive = location.pathname === item.path || 
+          (item.path !== '/' && location.pathname.startsWith(item.path));
         
         return (
           <Link

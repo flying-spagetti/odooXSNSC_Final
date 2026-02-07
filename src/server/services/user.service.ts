@@ -4,8 +4,9 @@
  */
 
 import { PrismaClient, Role } from '@prisma/client';
-import { NotFoundError, ConflictError, UnauthorizedError } from '../domain/errors';
+import { NotFoundError, ConflictError, UnauthorizedError, ValidationError } from '../domain/errors';
 import { hashPassword, verifyPassword } from '../utils/password';
+import crypto from 'crypto';
 
 export interface CreateUserData {
   email: string;
@@ -124,5 +125,103 @@ export class UserService {
     ]);
 
     return { items, total, limit, offset };
+  }
+
+  /**
+   * Request password reset - generates and stores reset token
+   * Returns true if user exists (always returns true for security)
+   */
+  async requestPasswordReset(email: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    // Always return success to prevent email enumeration
+    if (!user) {
+      return { success: true, message: 'If the email exists, a reset link will be sent' };
+    }
+
+    // Generate secure random token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
+
+    await this.prisma.user.update({
+      where: { email },
+      data: {
+        resetToken,
+        resetTokenExpiry,
+      },
+    });
+
+    // In production, send email here with resetToken
+    // For now, we'll return the token for testing
+    return { 
+      success: true, 
+      message: 'If the email exists, a reset link will be sent',
+      token: resetToken, // Remove this in production
+    };
+  }
+
+  /**
+   * Verify reset token and check if it's valid
+   */
+  async verifyResetToken(token: string) {
+    const user = await this.prisma.user.findFirst({
+      where: {
+        resetToken: token,
+        resetTokenExpiry: {
+          gt: new Date(), // Token not expired
+        },
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+      },
+    });
+
+    if (!user) {
+      throw new ValidationError('Invalid or expired reset token');
+    }
+
+    return user;
+  }
+
+  /**
+   * Reset password with valid token
+   */
+  async resetPassword(token: string, newPassword: string) {
+    // Verify token first
+    const user = await this.verifyResetToken(token);
+
+    // Hash new password
+    const hashedPassword = await hashPassword(newPassword);
+
+    // Update password and clear reset token
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        resetToken: null,
+        resetTokenExpiry: null,
+      },
+    });
+
+    return {
+      success: true,
+      message: 'Password has been reset successfully',
+    };
+  }
+
+  /**
+   * Check if email exists (for forgot password validation)
+   */
+  async checkEmailExists(email: string): Promise<boolean> {
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+
+    return !!user;
   }
 }

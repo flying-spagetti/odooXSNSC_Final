@@ -8,7 +8,17 @@ import Layout from './components/Layout';
 
 // Pages
 import Login from './pages/Login';
+import Signup from './pages/Signup';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
+import ProductsPage from './pages/products/ProductsPage';
+import ProductDetailPage from './pages/products/ProductDetailPage';
+import SubscriptionsPage from './pages/subscriptions/SubscriptionsPage';
+import SubscriptionDetailPage from './pages/subscriptions/SubscriptionDetailPage';
+import CreateSubscriptionPage from './pages/subscriptions/CreateSubscriptionPage';
+import InvoicesPage from './pages/invoices/InvoicesPage';
+import InvoiceDetailPage from './pages/invoices/InvoiceDetailPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -31,8 +41,13 @@ function App() {
       <ChakraProvider>
         <BrowserRouter>
           <Routes>
+            {/* Auth Routes */}
             <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             
+            {/* Dashboard */}
             <Route
               path="/"
               element={
@@ -44,29 +59,77 @@ function App() {
               }
             />
             
+            {/* Products */}
             <Route
-              path="/subscriptions"
+              path="/products"
               element={
                 <ProtectedRoute>
                   <Layout>
-                    <div className="text-center py-12">
-                      <h2 className="text-2xl font-bold">Subscriptions</h2>
-                      <p className="text-muted-foreground mt-2">Coming soon</p>
-                    </div>
+                    <ProductsPage />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/products/:id"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <ProductDetailPage />
                   </Layout>
                 </ProtectedRoute>
               }
             />
             
+            {/* Subscriptions */}
+            <Route
+              path="/subscriptions"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <SubscriptionsPage />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/subscriptions/new"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <CreateSubscriptionPage />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/subscriptions/:id"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <SubscriptionDetailPage />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            
+            {/* Invoices */}
             <Route
               path="/invoices"
               element={
                 <ProtectedRoute>
                   <Layout>
-                    <div className="text-center py-12">
-                      <h2 className="text-2xl font-bold">Invoices</h2>
-                      <p className="text-muted-foreground mt-2">Coming soon</p>
-                    </div>
+                    <InvoicesPage />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/invoices/:id"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <InvoiceDetailPage />
                   </Layout>
                 </ProtectedRoute>
               }
