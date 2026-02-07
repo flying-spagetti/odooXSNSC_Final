@@ -112,6 +112,18 @@ const invoicesRoutes: FastifyPluginAsync = async (fastify) => {
       const params = z.object({ id: z.string() }).parse(request.params);
       const data = RecordPaymentSchema.parse(request.body);
 
+      const invoice = await invoiceService.getById(params.id);
+
+      if (
+        !canAccessResource(
+          request.user!.role,
+          invoice.subscription.userId,
+          request.user!.userId
+        )
+      ) {
+        throw new ForbiddenError('payments:create', 'Cannot record payment for other users invoices');
+      }
+
       const payment = await paymentService.recordPayment(
         params.id,
         {
