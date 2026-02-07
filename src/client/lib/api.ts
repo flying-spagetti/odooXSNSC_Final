@@ -104,11 +104,19 @@ export interface Subscription {
   startDate?: string;
   endDate?: string;
   nextBillingDate?: string;
+  orderDate?: string;
+  expirationDate?: string;
+  quotationTemplate?: string;
+  paymentTermDays?: number;
+  paymentMethod?: 'BANK_TRANSFER' | 'CREDIT_CARD' | 'CASH' | 'CHECK' | 'OTHER';
+  paymentDone: boolean;
+  salespersonId?: string;
   notes?: string;
   createdAt: string;
   updatedAt: string;
   user?: { id: string; email: string; name: string };
   plan?: RecurringPlan;
+  salesperson?: { id: string; email: string; name: string };
   lines?: SubscriptionLine[];
   invoices?: Invoice[];
   _count?: { lines: number; invoices: number };
@@ -267,8 +275,37 @@ export const subscriptionApi = {
   get: (id: string) =>
     api.get<{ subscription: Subscription }>(`/subscriptions/${id}`),
   
-  create: (data: { userId: string; planId: string; notes?: string }) =>
+  create: (data: {
+    userId: string;
+    planId: string;
+    notes?: string;
+    quotationTemplate?: string;
+    expirationDate?: string;
+    paymentTermDays?: number;
+    paymentMethod?: string;
+    salespersonId?: string;
+  }) =>
     api.post<{ subscription: Subscription }>('/subscriptions', data),
+  
+  update: (id: string, data: {
+    quotationTemplate?: string;
+    expirationDate?: string;
+    paymentTermDays?: number;
+    paymentMethod?: string;
+    paymentDone?: boolean;
+    salespersonId?: string;
+    notes?: string;
+  }) =>
+    api.patch<{ subscription: Subscription }>(`/subscriptions/${id}`, data),
+
+  delete: (id: string) =>
+    api.delete(`/subscriptions/${id}`),
+
+  cancel: (id: string) =>
+    api.post<{ subscription: Subscription }>(`/subscriptions/${id}/actions/cancel`, {}),
+
+  renew: (id: string) =>
+    api.post<{ subscription: Subscription }>(`/subscriptions/${id}/actions/renew`, {}),
   
   addLine: (id: string, data: { variantId: string; quantity: number; unitPrice: number; discountId?: string; taxRateId?: string; notes?: string }) =>
     api.post<{ line: SubscriptionLine }>(`/subscriptions/${id}/lines`, data),
@@ -328,6 +365,86 @@ export const taxApi = {
   
   delete: (id: string) =>
     api.delete(`/taxes/${id}`),
+};
+
+// Report APIs
+export const reportApi = {
+  getSummary: (params?: { from?: string; to?: string }) =>
+    api.get<{ summary: ReportSummary }>('/reports/summary', { params }),
+
+  getSubscriptionMetrics: () =>
+    api.get<{ metrics: { status: string; count: number }[] }>('/reports/subscriptions/metrics'),
+};
+
+export interface ReportSummary {
+  activeSubscriptionsCount: number;
+  totalRevenue: number;
+  totalPayments: number;
+  overdueInvoicesCount: number;
+  draftInvoicesCount: number;
+  confirmedInvoicesCount: number;
+  paidInvoicesCount: number;
+}
+
+// Subscription Template types
+export interface SubscriptionTemplateLine {
+  id: string;
+  templateId: string;
+  variantId: string;
+  quantity: number;
+  unitPrice: string;
+  discountId?: string;
+  taxRateId?: string;
+  variant?: ProductVariant & { product?: Product };
+  discount?: Discount;
+  taxRate?: TaxRate;
+}
+
+export interface SubscriptionTemplate {
+  id: string;
+  name: string;
+  validityDays: number;
+  planId: string;
+  description?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  plan?: RecurringPlan;
+  lines?: SubscriptionTemplateLine[];
+}
+
+// Template APIs
+export const templateApi = {
+  list: (params?: { isActive?: boolean; limit?: number; offset?: number }) =>
+    api.get<PaginatedResponse<SubscriptionTemplate>>('/templates', { params }),
+
+  get: (id: string) =>
+    api.get<{ template: SubscriptionTemplate }>(`/templates/${id}`),
+
+  create: (data: {
+    name: string;
+    validityDays: number;
+    planId: string;
+    description?: string;
+    lines?: { variantId: string; quantity: number; unitPrice: number; discountId?: string; taxRateId?: string }[];
+  }) => api.post<{ template: SubscriptionTemplate }>('/templates', data),
+
+  update: (id: string, data: {
+    name?: string;
+    validityDays?: number;
+    planId?: string;
+    description?: string;
+    isActive?: boolean;
+  }) => api.patch<{ template: SubscriptionTemplate }>(`/templates/${id}`, data),
+
+  delete: (id: string) =>
+    api.delete(`/templates/${id}`),
+
+  addLine: (id: string, data: { variantId: string; quantity: number; unitPrice: number; discountId?: string; taxRateId?: string }) =>
+    api.post<{ line: SubscriptionTemplateLine }>(`/templates/${id}/lines`, data),
+
+  removeLine: (id: string, lineId: string) =>
+    api.delete(`/templates/${id}/lines/${lineId}`),
 };
 
 // Discount APIs

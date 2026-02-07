@@ -1,9 +1,29 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Box, Flex, SimpleGrid, VStack, useDisclosure, useToast } from '@chakra-ui/react';
-import { ArrowLeft, FileText, Plus } from 'lucide-react';
-import { subscriptionApi, Subscription } from '@/lib/api';
+import {
+  Box,
+  Flex,
+  SimpleGrid,
+  VStack,
+  useDisclosure,
+  useToast,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
+  Tabs,
+  TabList,
+  TabPanels,
+  Tab,
+  TabPanel,
+  Checkbox,
+} from '@chakra-ui/react';
+import { ArrowLeft, FileText, Plus, Send, Check, Eye, RefreshCw, TrendingUp, X, Trash2, Save } from 'lucide-react';
+import { subscriptionApi, userApi, Subscription } from '@/lib/api';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,15 +31,18 @@ import { StatusBadge } from '@/components/StatusBadge';
 import { FormDialog } from '@/components/FormDialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useAuthStore } from '@/store/authStore';
 
 export default function SubscriptionDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const toast = useToast();
-  
+  const { user: currentUser } = useAuthStore();
+
   const { isOpen: isConfirmOpen, onOpen: onConfirmOpen, onClose: onConfirmClose } = useDisclosure();
   const { isOpen: isInvoiceOpen, onOpen: onInvoiceOpen, onClose: onInvoiceClose } = useDisclosure();
+  const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
   const [startDate, setStartDate] = useState('');
   const [periodStart, setPeriodStart] = useState('');
 
@@ -29,24 +52,25 @@ export default function SubscriptionDetailPage() {
     enabled: !!id,
   });
 
+  // Fetch salesperson options (ADMIN & INTERNAL users)
+  const { data: salespersonsData } = useQuery({
+    queryKey: ['users', 'salespersons'],
+    queryFn: () => userApi.list({ limit: 100 }),
+  });
+
+  const salespersons = (salespersonsData?.data?.items || []).filter(
+    (u: any) => u.role === 'ADMIN' || u.role === 'INTERNAL'
+  );
+
+  // --- Mutations ---
   const quoteMutation = useMutation({
     mutationFn: () => subscriptionApi.quote(id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['subscription', id] });
-      toast({
-        title: 'Status updated',
-        description: 'Subscription moved to Quotation status',
-        status: 'success',
-        duration: 3000,
-      });
+      toast({ title: 'Quotation sent', status: 'success', duration: 3000 });
     },
     onError: (error: any) => {
-      toast({
-        title: 'Error',
-        description: error.response?.data?.message || 'Failed to update status',
-        status: 'error',
-        duration: 5000,
-      });
+      toast({ title: 'Error', description: error.response?.data?.message || 'Failed', status: 'error', duration: 5000 });
     },
   });
 
@@ -54,21 +78,11 @@ export default function SubscriptionDetailPage() {
     mutationFn: (startDate?: string) => subscriptionApi.confirm(id!, startDate),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['subscription', id] });
-      toast({
-        title: 'Status updated',
-        description: 'Subscription confirmed successfully',
-        status: 'success',
-        duration: 3000,
-      });
+      toast({ title: 'Subscription confirmed', status: 'success', duration: 3000 });
       onConfirmClose();
     },
     onError: (error: any) => {
-      toast({
-        title: 'Error',
-        description: error.response?.data?.message || 'Failed to confirm subscription',
-        status: 'error',
-        duration: 5000,
-      });
+      toast({ title: 'Error', description: error.response?.data?.message || 'Failed', status: 'error', duration: 5000 });
     },
   });
 
@@ -76,20 +90,10 @@ export default function SubscriptionDetailPage() {
     mutationFn: () => subscriptionApi.activate(id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['subscription', id] });
-      toast({
-        title: 'Status updated',
-        description: 'Subscription activated successfully',
-        status: 'success',
-        duration: 3000,
-      });
+      toast({ title: 'Subscription activated', status: 'success', duration: 3000 });
     },
     onError: (error: any) => {
-      toast({
-        title: 'Error',
-        description: error.response?.data?.message || 'Failed to activate subscription',
-        status: 'error',
-        duration: 5000,
-      });
+      toast({ title: 'Error', description: error.response?.data?.message || 'Failed', status: 'error', duration: 5000 });
     },
   });
 
@@ -97,20 +101,57 @@ export default function SubscriptionDetailPage() {
     mutationFn: () => subscriptionApi.close(id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['subscription', id] });
-      toast({
-        title: 'Status updated',
-        description: 'Subscription closed',
-        status: 'success',
-        duration: 3000,
-      });
+      toast({ title: 'Subscription closed', status: 'success', duration: 3000 });
     },
     onError: (error: any) => {
-      toast({
-        title: 'Error',
-        description: error.response?.data?.message || 'Failed to close subscription',
-        status: 'error',
-        duration: 5000,
-      });
+      toast({ title: 'Error', description: error.response?.data?.message || 'Failed', status: 'error', duration: 5000 });
+    },
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: () => subscriptionApi.cancel(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['subscription', id] });
+      toast({ title: 'Subscription cancelled', status: 'success', duration: 3000 });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.response?.data?.message || 'Failed', status: 'error', duration: 5000 });
+    },
+  });
+
+  const renewMutation = useMutation({
+    mutationFn: () => subscriptionApi.renew(id!),
+    onSuccess: (response: any) => {
+      queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
+      const newSub = response.data?.subscription;
+      toast({ title: 'Subscription renewed', description: newSub ? `New subscription: ${newSub.subscriptionNumber}` : '', status: 'success', duration: 5000 });
+      if (newSub?.id) navigate(`/subscriptions/${newSub.id}`);
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.response?.data?.message || 'Failed to renew', status: 'error', duration: 5000 });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (data: any) => subscriptionApi.update(id!, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['subscription', id] });
+      toast({ title: 'Subscription updated', status: 'success', duration: 3000 });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.response?.data?.message || 'Failed to update', status: 'error', duration: 5000 });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => subscriptionApi.delete(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
+      toast({ title: 'Subscription deleted', status: 'success', duration: 3000 });
+      navigate('/subscriptions');
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.response?.data?.message || 'Failed to delete', status: 'error', duration: 5000 });
     },
   });
 
@@ -127,16 +168,10 @@ export default function SubscriptionDetailPage() {
         isClosable: true,
       });
       onInvoiceClose();
-      // Navigate to invoice
       navigate(`/invoices/${response.data.invoice.id}`);
     },
     onError: (error: any) => {
-      toast({
-        title: 'Error',
-        description: error.response?.data?.message || 'Failed to generate invoice',
-        status: 'error',
-        duration: 5000,
-      });
+      toast({ title: 'Error', description: error.response?.data?.message || 'Failed to generate invoice', status: 'error', duration: 5000 });
     },
   });
 
@@ -158,10 +193,10 @@ export default function SubscriptionDetailPage() {
     );
   }
 
+  // --- Calculation helpers ---
   const calculateLineTotal = (line: any) => {
     let subtotal = line.quantity * parseFloat(line.unitPrice);
     let discount = 0;
-    
     if (line.discount) {
       if (line.discount.type === 'PERCENTAGE') {
         discount = subtotal * (parseFloat(line.discount.value) / 100);
@@ -169,11 +204,25 @@ export default function SubscriptionDetailPage() {
         discount = parseFloat(line.discount.value);
       }
     }
-    
     const afterDiscount = subtotal - discount;
     const tax = line.taxRate ? afterDiscount * (parseFloat(line.taxRate.rate) / 100) : 0;
-    
     return afterDiscount + tax;
+  };
+
+  const calculateLineDiscount = (line: any) => {
+    if (!line.discount) return 0;
+    const subtotal = line.quantity * parseFloat(line.unitPrice);
+    if (line.discount.type === 'PERCENTAGE') {
+      return subtotal * (parseFloat(line.discount.value) / 100);
+    }
+    return parseFloat(line.discount.value);
+  };
+
+  const calculateLineTax = (line: any) => {
+    if (!line.taxRate) return 0;
+    let subtotal = line.quantity * parseFloat(line.unitPrice);
+    let discount = calculateLineDiscount(line);
+    return (subtotal - discount) * (parseFloat(line.taxRate.rate) / 100);
   };
 
   const calculateTotals = () => {
@@ -181,25 +230,12 @@ export default function SubscriptionDetailPage() {
     let subtotal = 0;
     let totalDiscount = 0;
     let totalTax = 0;
-
     lines.forEach((line: any) => {
       const lineSubtotal = line.quantity * parseFloat(line.unitPrice);
       subtotal += lineSubtotal;
-
-      if (line.discount) {
-        if (line.discount.type === 'PERCENTAGE') {
-          totalDiscount += lineSubtotal * (parseFloat(line.discount.value) / 100);
-        } else {
-          totalDiscount += parseFloat(line.discount.value);
-        }
-      }
-
-      if (line.taxRate) {
-        const afterDiscount = lineSubtotal - (line.discount ? (line.discount.type === 'PERCENTAGE' ? lineSubtotal * (parseFloat(line.discount.value) / 100) : parseFloat(line.discount.value)) : 0);
-        totalTax += afterDiscount * (parseFloat(line.taxRate.rate) / 100);
-      }
+      totalDiscount += calculateLineDiscount(line);
+      totalTax += calculateLineTax(line);
     });
-
     return {
       subtotal,
       discount: totalDiscount,
@@ -216,19 +252,13 @@ export default function SubscriptionDetailPage() {
 
   const handleGenerateInvoice = () => {
     if (!periodStart) {
-      toast({
-        title: 'Validation error',
-        description: 'Please select a period start date',
-        status: 'error',
-        duration: 3000,
-      });
+      toast({ title: 'Validation error', description: 'Please select a period start date', status: 'error', duration: 3000 });
       return;
     }
     generateInvoiceMutation.mutate(periodStart);
   };
 
-  // Set default period start to next billing date or today
-  const defaultPeriodStart = subscription.nextBillingDate 
+  const defaultPeriodStart = subscription.nextBillingDate
     ? new Date(subscription.nextBillingDate).toISOString().split('T')[0]
     : new Date().toISOString().split('T')[0];
 
@@ -236,180 +266,364 @@ export default function SubscriptionDetailPage() {
     setPeriodStart(defaultPeriodStart);
   }
 
+  const isEditable = ['DRAFT', 'QUOTATION', 'CONFIRMED'].includes(subscription.status);
+
+  // Status state badges (Quotation → quotation sent → confirmed)
+  const getStatusStepIndex = () => {
+    switch (subscription.status) {
+      case 'DRAFT': return 0;
+      case 'QUOTATION': return 1;
+      case 'CONFIRMED':
+      case 'ACTIVE':
+      case 'CLOSED':
+        return 2;
+      default: return 0;
+    }
+  };
+  const statusStepIndex = getStatusStepIndex();
+
   return (
     <Box>
-      <Flex align="center" gap={4} className="mb-6">
+      {/* Back button */}
+      <Flex align="center" gap={4} className="mb-4">
         <Button variant="outline" size="sm" onClick={() => navigate('/subscriptions')}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back
         </Button>
-        <div className="flex-1">
-          <Flex align="center" gap={3}>
-            <h1 className="text-3xl font-bold">{subscription.subscriptionNumber}</h1>
-            <StatusBadge status={subscription.status} type="subscription" />
-          </Flex>
-          <p className="text-muted-foreground">
-            Created {new Date(subscription.createdAt).toLocaleDateString()}
-          </p>
-        </div>
       </Flex>
 
-      <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={6} className="mb-6">
-        {/* Customer & Plan Info */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Customer & Plan</CardTitle>
-          </CardHeader>
-          <CardContent>
+      {/* Top toolbar: New, Delete, Save | Send, Confirm, Preview */}
+      <Flex
+        justify="space-between"
+        align="center"
+        className="mb-4 p-3 bg-white border rounded-lg shadow-sm"
+        wrap="wrap"
+        gap={2}
+      >
+        <Flex gap={2} wrap="wrap" align="center">
+          <Button size="sm" onClick={() => navigate('/subscriptions/new')}>
+            <Plus className="h-4 w-4 mr-1" /> New
+          </Button>
+
+          {subscription.status === 'DRAFT' && (
+            <Button size="sm" variant="ghost" onClick={onDeleteOpen} title="Delete">
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
+
+          {isEditable && (
+            <Button size="sm" variant="ghost" onClick={() => {
+              toast({ title: 'Saved', description: 'All changes are saved automatically', status: 'info', duration: 2000 });
+            }} title="Save">
+              <Save className="h-4 w-4" />
+            </Button>
+          )}
+
+          {subscription.status === 'DRAFT' && (
+            <Button size="sm" onClick={() => quoteMutation.mutate()} disabled={quoteMutation.isPending}>
+              <Send className="h-4 w-4 mr-1" /> Send
+            </Button>
+          )}
+
+          {subscription.status === 'QUOTATION' && (
+            <Button size="sm" onClick={onConfirmOpen} disabled={confirmMutation.isPending}>
+              <Check className="h-4 w-4 mr-1" /> Confirm
+            </Button>
+          )}
+
+          {(['CONFIRMED', 'ACTIVE', 'CLOSED'].includes(subscription.status)) && (
+            <Button size="sm" variant="outline" onClick={() => {
+              window.open(`/subscriptions/${id}`, '_blank');
+            }}>
+              <Eye className="h-4 w-4 mr-1" /> Preview
+            </Button>
+          )}
+        </Flex>
+
+        {/* Status state badges */}
+        <Flex gap={2} align="center">
+          <Badge
+            variant={statusStepIndex >= 0 ? 'default' : 'outline'}
+            className={statusStepIndex >= 1 ? 'bg-primary text-primary-foreground' : statusStepIndex === 0 ? 'border-primary text-primary border-dashed border-2' : ''}
+          >
+            Quotation
+          </Badge>
+          <Badge
+            variant={statusStepIndex >= 1 ? 'default' : 'outline'}
+            className={statusStepIndex >= 2 ? 'bg-primary text-primary-foreground' : statusStepIndex === 1 ? 'border-primary text-primary border-dashed border-2' : ''}
+          >
+            quotation sent
+          </Badge>
+          <Badge
+            variant={statusStepIndex >= 2 ? 'default' : 'outline'}
+            className={statusStepIndex >= 2 ? 'bg-primary text-primary-foreground' : ''}
+          >
+            confirmed
+          </Badge>
+        </Flex>
+      </Flex>
+
+      {/* Lifecycle action buttons: Create Invoice, Cancel, Renew, Upsell, Close */}
+      {subscription.status !== 'DRAFT' && (
+        <Flex gap={2} className="mb-4" wrap="wrap">
+          <Button
+            size="sm"
+            onClick={onInvoiceOpen}
+            disabled={!['CONFIRMED', 'ACTIVE'].includes(subscription.status)}
+          >
+            <FileText className="h-4 w-4 mr-1" /> Create Invoice
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => cancelMutation.mutate()}
+            disabled={cancelMutation.isPending || !['QUOTATION', 'CONFIRMED', 'ACTIVE'].includes(subscription.status)}
+          >
+            <X className="h-4 w-4 mr-1" /> Cancel
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => renewMutation.mutate()}
+            disabled={renewMutation.isPending}
+          >
+            <RefreshCw className="h-4 w-4 mr-1" /> Renew
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => navigate('/subscriptions/new')}
+          >
+            <TrendingUp className="h-4 w-4 mr-1" /> Upsell
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => closeMutation.mutate()}
+            disabled={closeMutation.isPending || !['QUOTATION', 'CONFIRMED', 'ACTIVE'].includes(subscription.status)}
+          >
+            {closeMutation.isPending ? 'Closing...' : 'Close'}
+          </Button>
+        </Flex>
+      )}
+
+      {/* Read-only notice for confirmed+ subscriptions */}
+      {['CONFIRMED', 'ACTIVE', 'CLOSED'].includes(subscription.status) && (
+        <Box className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+          <p className="text-amber-800 text-sm font-medium">
+            Once the Order is confirmed, no one can make any changes to the order line.
+          </p>
+        </Box>
+      )}
+
+      {/* Subscription Number */}
+      <Card className="mb-6">
+        <CardContent className="p-6">
+          <div className="mb-4">
+            <h2 className="text-2xl font-bold">{subscription.subscriptionNumber}</h2>
+            <p className="text-sm text-muted-foreground">
+              Created {new Date(subscription.createdAt).toLocaleDateString()}
+            </p>
+          </div>
+
+          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
+            {/* Left column */}
             <VStack spacing={4} align="stretch">
               <div>
-                <p className="text-sm text-muted-foreground">Customer</p>
-                <p className="font-medium">{subscription.user?.name}</p>
+                <Label className="text-sm font-semibold text-muted-foreground">Customer</Label>
+                <p className="font-medium text-lg">{subscription.user?.name || '-'}</p>
                 <p className="text-sm text-muted-foreground">{subscription.user?.email}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Plan</p>
-                <p className="font-medium">{subscription.plan?.name}</p>
-                <p className="text-sm text-muted-foreground">
-                  {subscription.plan?.billingPeriod} (every {subscription.plan?.intervalCount})
+                <Label className="text-sm font-semibold text-muted-foreground">Quotation Template</Label>
+                <p className="font-medium">{subscription.quotationTemplate || '-'}</p>
+              </div>
+            </VStack>
+
+            {/* Right column */}
+            <VStack spacing={4} align="stretch">
+              <div>
+                <Label className="text-sm font-semibold text-muted-foreground">Expiration</Label>
+                <p className="font-medium">
+                  {subscription.expirationDate
+                    ? new Date(subscription.expirationDate).toLocaleDateString()
+                    : '-'}
                 </p>
               </div>
-              {subscription.startDate && (
+              {subscription.orderDate && (
                 <div>
-                  <p className="text-sm text-muted-foreground">Start Date</p>
-                  <p className="font-medium">{new Date(subscription.startDate).toLocaleDateString()}</p>
+                  <Label className="text-sm font-semibold text-muted-foreground">Order Date</Label>
+                  <p className="font-medium">{new Date(subscription.orderDate).toLocaleDateString()}</p>
                 </div>
               )}
+              <div>
+                <Label className="text-sm font-semibold text-muted-foreground">Recurring Plan</Label>
+                <p className="font-medium">
+                  {subscription.plan?.name || '-'}
+                  {subscription.plan && (
+                    <span className="text-sm text-muted-foreground ml-2">
+                      ({subscription.plan.billingPeriod} / every {subscription.plan.intervalCount})
+                    </span>
+                  )}
+                </p>
+              </div>
+              <div>
+                <Label className="text-sm font-semibold text-muted-foreground">Payment Term</Label>
+                <p className="font-medium">
+                  {subscription.paymentTermDays ? `${subscription.paymentTermDays} days` : '-'}
+                </p>
+              </div>
               {subscription.nextBillingDate && (
                 <div>
-                  <p className="text-sm text-muted-foreground">Next Billing Date</p>
+                  <Label className="text-sm font-semibold text-muted-foreground">Next Invoice</Label>
                   <p className="font-medium">{new Date(subscription.nextBillingDate).toLocaleDateString()}</p>
                 </div>
               )}
             </VStack>
-          </CardContent>
-        </Card>
-
-        {/* Status Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Actions</CardTitle>
-            <CardDescription>Manage subscription lifecycle</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <VStack spacing={3} align="stretch">
-              {subscription.status === 'DRAFT' && (
-                <Button
-                  onClick={() => quoteMutation.mutate()}
-                  disabled={quoteMutation.isPending}
-                  className="w-full"
-                >
-                  {quoteMutation.isPending ? 'Processing...' : 'Send Quote'}
-                </Button>
-              )}
-
-              {subscription.status === 'QUOTATION' && (
-                <Button
-                  onClick={onConfirmOpen}
-                  disabled={confirmMutation.isPending}
-                  className="w-full"
-                >
-                  Confirm Subscription
-                </Button>
-              )}
-
-              {subscription.status === 'CONFIRMED' && (
-                <Button
-                  onClick={() => activateMutation.mutate()}
-                  disabled={activateMutation.isPending}
-                  className="w-full"
-                >
-                  {activateMutation.isPending ? 'Processing...' : 'Activate'}
-                </Button>
-              )}
-
-              {subscription.status === 'ACTIVE' && (
-                <>
-                  <Button
-                    onClick={onInvoiceOpen}
-                    className="w-full"
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    Generate Invoice
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => closeMutation.mutate()}
-                    disabled={closeMutation.isPending}
-                    className="w-full"
-                  >
-                    {closeMutation.isPending ? 'Processing...' : 'Close Subscription'}
-                  </Button>
-                </>
-              )}
-
-              {subscription.status === 'CLOSED' && (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  This subscription is closed. No actions available.
-                </p>
-              )}
-            </VStack>
-          </CardContent>
-        </Card>
-      </SimpleGrid>
-
-      {/* Line Items */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Line Items</CardTitle>
-          <CardDescription>{subscription.lines?.length || 0} items in this subscription</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {subscription.lines && subscription.lines.length > 0 ? (
-            <VStack spacing={3} align="stretch">
-              {subscription.lines.map((line: any) => (
-                <Flex key={line.id} justify="space-between" className="p-3 border rounded-md">
-                  <Box flex={1}>
-                    <p className="font-medium">
-                      {line.variant?.product?.name} - {line.variant?.name}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Qty: {line.quantity} × ${parseFloat(line.unitPrice).toFixed(2)}
-                      {line.taxRate && ` | Tax: ${line.taxRate.name} (${parseFloat(line.taxRate.rate).toFixed(0)}%)`}
-                      {line.discount && ` | Discount: ${line.discount.name}`}
-                    </p>
-                  </Box>
-                  <p className="font-semibold">${calculateLineTotal(line).toFixed(2)}</p>
-                </Flex>
-              ))}
-              
-              <Box className="pt-4 border-t space-y-2">
-                <Flex justify="space-between">
-                  <p className="text-muted-foreground">Subtotal</p>
-                  <p className="font-medium">${totals.subtotal.toFixed(2)}</p>
-                </Flex>
-                {totals.discount > 0 && (
-                  <Flex justify="space-between">
-                    <p className="text-muted-foreground">Discount</p>
-                    <p className="font-medium text-green-600">-${totals.discount.toFixed(2)}</p>
-                  </Flex>
-                )}
-                {totals.tax > 0 && (
-                  <Flex justify="space-between">
-                    <p className="text-muted-foreground">Tax</p>
-                    <p className="font-medium">${totals.tax.toFixed(2)}</p>
-                  </Flex>
-                )}
-                <Flex justify="space-between" className="pt-2 border-t">
-                  <p className="text-lg font-bold">Total</p>
-                  <p className="text-lg font-bold text-primary">${totals.total.toFixed(2)}</p>
-                </Flex>
-              </Box>
-            </VStack>
-          ) : (
-            <p className="text-center text-muted-foreground py-8">No line items</p>
-          )}
+          </SimpleGrid>
         </CardContent>
+      </Card>
+
+      {/* Tabs: Order Lines | Other Info */}
+      <Card className="mb-6">
+        <Tabs>
+          <TabList className="px-4">
+            <Tab fontWeight="semibold">Order Lines</Tab>
+            <Tab fontWeight="semibold">Other Info</Tab>
+          </TabList>
+
+          <TabPanels>
+            {/* Order Lines Tab */}
+            <TabPanel p={0}>
+              {subscription.lines && subscription.lines.length > 0 ? (
+                <Box className="overflow-x-auto">
+                  <Table size="sm">
+                    <Thead>
+                      <Tr>
+                        <Th>Product</Th>
+                        <Th isNumeric>Quantity</Th>
+                        <Th isNumeric>Unit Price</Th>
+                        <Th isNumeric>Discount</Th>
+                        <Th isNumeric>Taxes</Th>
+                        <Th isNumeric>Amount</Th>
+                      </Tr>
+                    </Thead>
+                    <Tbody>
+                      {subscription.lines.map((line: any) => (
+                        <Tr key={line.id}>
+                          <Td>
+                            <span className="font-medium">
+                              {line.variant?.product?.name}
+                              {line.variant?.name && ` - ${line.variant.name}`}
+                            </span>
+                          </Td>
+                          <Td isNumeric>{line.quantity}</Td>
+                          <Td isNumeric>${parseFloat(line.unitPrice).toFixed(2)}</Td>
+                          <Td isNumeric>
+                            {line.discount
+                              ? line.discount.type === 'PERCENTAGE'
+                                ? `${parseFloat(line.discount.value).toFixed(0)}%`
+                                : `$${parseFloat(line.discount.value).toFixed(2)}`
+                              : '-'}
+                          </Td>
+                          <Td isNumeric>
+                            {line.taxRate
+                              ? `${line.taxRate.name} (${parseFloat(line.taxRate.rate).toFixed(0)}%)`
+                              : '-'}
+                          </Td>
+                          <Td isNumeric className="font-semibold">
+                            ${calculateLineTotal(line).toFixed(2)}
+                          </Td>
+                        </Tr>
+                      ))}
+                    </Tbody>
+                  </Table>
+
+                  {/* Totals */}
+                  <Box className="p-4 border-t space-y-2">
+                    <Flex justify="flex-end" gap={8}>
+                      <span className="text-muted-foreground">Subtotal</span>
+                      <span className="font-medium w-24 text-right">${totals.subtotal.toFixed(2)}</span>
+                    </Flex>
+                    {totals.discount > 0 && (
+                      <Flex justify="flex-end" gap={8}>
+                        <span className="text-muted-foreground">Discount</span>
+                        <span className="font-medium text-green-600 w-24 text-right">-${totals.discount.toFixed(2)}</span>
+                      </Flex>
+                    )}
+                    {totals.tax > 0 && (
+                      <Flex justify="flex-end" gap={8}>
+                        <span className="text-muted-foreground">Tax</span>
+                        <span className="font-medium w-24 text-right">${totals.tax.toFixed(2)}</span>
+                      </Flex>
+                    )}
+                    <Flex justify="flex-end" gap={8} className="pt-2 border-t">
+                      <span className="text-lg font-bold">Total</span>
+                      <span className="text-lg font-bold text-primary w-24 text-right">${totals.total.toFixed(2)}</span>
+                    </Flex>
+                  </Box>
+                </Box>
+              ) : (
+                <p className="text-center text-muted-foreground py-8">No order lines</p>
+              )}
+            </TabPanel>
+
+            {/* Other Info Tab */}
+            <TabPanel>
+              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6} className="p-2">
+                <VStack spacing={4} align="stretch">
+                  <div>
+                    <Label className="text-sm font-semibold text-muted-foreground">Salesperson</Label>
+                    <p className="font-medium">
+                      {subscription.salesperson?.name || currentUser?.name || '-'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      By default the login user is assigned as the Sales person. However only admin can change the Sales person.
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-semibold text-muted-foreground">Payment Method</Label>
+                    <p className="font-medium">
+                      {subscription.paymentMethod
+                        ? subscription.paymentMethod.replace(/_/g, ' ')
+                        : '-'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Which payment method is used for payment. It should be updated after payment is done.
+                    </p>
+                  </div>
+                </VStack>
+
+                <VStack spacing={4} align="stretch">
+                  <div>
+                    <Label className="text-sm font-semibold text-muted-foreground">Start Date</Label>
+                    <p className="font-medium">
+                      {subscription.startDate
+                        ? new Date(subscription.startDate).toLocaleDateString()
+                        : '-'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      By default the day on which the quotation is confirmed will populate here. However this can be editable.
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-semibold text-muted-foreground">Payment Done</Label>
+                    <Flex align="center" gap={2}>
+                      <Checkbox
+                        isChecked={subscription.paymentDone}
+                        isDisabled={!isEditable}
+                        onChange={(e) => {
+                          updateMutation.mutate({ paymentDone: e.target.checked });
+                        }}
+                      />
+                      <span className="text-sm">{subscription.paymentDone ? 'Yes' : 'No'}</span>
+                    </Flex>
+                  </div>
+                </VStack>
+              </SimpleGrid>
+            </TabPanel>
+          </TabPanels>
+        </Tabs>
       </Card>
 
       {/* Related Invoices */}
@@ -508,6 +722,18 @@ export default function SubscriptionDetailPage() {
           </Flex>
         </VStack>
       </FormDialog>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={isDeleteOpen}
+        onClose={onDeleteClose}
+        onConfirm={() => deleteMutation.mutate()}
+        title="Delete Subscription"
+        message="Are you sure you want to delete this subscription? This action cannot be undone."
+        confirmText="Delete"
+        variant="destructive"
+        isLoading={deleteMutation.isPending}
+      />
     </Box>
   );
 }

@@ -23,6 +23,21 @@ export interface CreateSubscriptionData {
   userId: string;
   planId: string;
   notes?: string;
+  quotationTemplate?: string;
+  expirationDate?: string;
+  paymentTermDays?: number;
+  paymentMethod?: string;
+  salespersonId?: string;
+}
+
+export interface UpdateSubscriptionData {
+  quotationTemplate?: string;
+  expirationDate?: string;
+  paymentTermDays?: number;
+  paymentMethod?: string;
+  paymentDone?: boolean;
+  salespersonId?: string;
+  notes?: string;
 }
 
 export interface AddLineData {
@@ -71,10 +86,16 @@ export class SubscriptionService {
           planId: data.planId,
           status: 'DRAFT',
           notes: data.notes,
+          quotationTemplate: data.quotationTemplate,
+          expirationDate: data.expirationDate ? new Date(data.expirationDate) : undefined,
+          paymentTermDays: data.paymentTermDays,
+          paymentMethod: data.paymentMethod as any,
+          salespersonId: data.salespersonId,
         },
         include: {
           plan: true,
           user: { select: { id: true, email: true, name: true } },
+          salesperson: { select: { id: true, email: true, name: true } },
         },
       });
 
@@ -178,12 +199,15 @@ export class SubscriptionService {
         data: {
           status: 'CONFIRMED',
           startDate: effectiveStartDate,
+          orderDate: new Date(), // Set order date when confirmed
         },
         include: {
           plan: true,
+          user: { select: { id: true, email: true, name: true } },
+          salesperson: { select: { id: true, email: true, name: true } },
           lines: {
             include: {
-              variant: true,
+              variant: { include: { product: true } },
               discount: true,
               taxRate: true,
             },
@@ -230,9 +254,11 @@ export class SubscriptionService {
         },
         include: {
           plan: true,
+          user: { select: { id: true, email: true, name: true } },
+          salesperson: { select: { id: true, email: true, name: true } },
           lines: {
             include: {
-              variant: true,
+              variant: { include: { product: true } },
               discount: true,
               taxRate: true,
             },
@@ -259,6 +285,12 @@ export class SubscriptionService {
   async actionClose(subscriptionId: string, actorUserId: string, endDate?: Date) {
     const subscription = await this.getById(subscriptionId);
 
+    if (!['QUOTATION', 'CONFIRMED', 'ACTIVE'].includes(subscription.status)) {
+      throw new BusinessRuleError(
+        'Subscription can only be closed from QUOTATION, CONFIRMED, or ACTIVE status'
+      );
+    }
+
     return this.prisma.$transaction(async (tx) => {
       const updated = await tx.subscription.update({
         where: { id: subscriptionId },
@@ -281,6 +313,225 @@ export class SubscriptionService {
       );
 
       return updated;
+    });
+  }
+
+  /**
+   * Update subscription fields (only in DRAFT / QUOTATION / CONFIRMED)
+   */
+  async update(subscriptionId: string, data: UpdateSubscriptionData, actorUserId: string) {
+    const subscription = await this.getById(subscriptionId);
+
+    if (!['DRAFT', 'QUOTATION', 'CONFIRMED'].includes(subscription.status)) {
+      throw new BusinessRuleError(
+        'Subscription can only be updated in DRAFT, QUOTATION, or CONFIRMED status'
+      );
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.subscription.update({
+        where: { id: subscriptionId },
+        data: {
+          quotationTemplate: data.quotationTemplate,
+          expirationDate: data.expirationDate ? new Date(data.expirationDate) : undefined,
+          paymentTermDays: data.paymentTermDays,
+          paymentMethod: data.paymentMethod as any,
+          paymentDone: data.paymentDone,
+          salespersonId: data.salespersonId,
+          notes: data.notes,
+        },
+        include: {
+          plan: true,
+          user: { select: { id: true, email: true, name: true } },
+          salesperson: { select: { id: true, email: true, name: true } },
+          lines: {
+            include: {
+              variant: { include: { product: true } },
+              discount: true,
+              taxRate: true,
+            },
+          },
+        },
+      });
+
+      await this.auditService.log(
+        {
+          userId: actorUserId,
+          entityType: 'SUBSCRIPTION',
+          entityId: subscriptionId,
+          action: 'UPDATED',
+          newValue: data,
+        },
+        tx
+      );
+
+      return updated;
+    });
+  }
+
+  /**
+   * Delete a subscription (only allowed in DRAFT status)
+   */
+  async delete(subscriptionId: string, actorUserId: string) {
+    const subscription = await this.getById(subscriptionId);
+
+    if (subscription.status !== 'DRAFT') {
+      throw new BusinessRuleError('Only DRAFT subscriptions can be deleted');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      // Delete all lines first
+      await tx.subscriptionLine.deleteMany({
+        where: { subscriptionId },
+      });
+
+      // Delete the subscription
+      await tx.subscription.delete({
+        where: { id: subscriptionId },
+      });
+
+      await this.auditService.log(
+        {
+          userId: actorUserId,
+          entityType: 'SUBSCRIPTION',
+          entityId: subscriptionId,
+          action: 'DELETED',
+          newValue: { subscriptionNumber: subscription.subscriptionNumber },
+        },
+        tx
+      );
+
+      return true;
+    });
+  }
+
+  /**
+   * Cancel subscription (from QUOTATION or CONFIRMED → back to DRAFT)
+   */
+  async actionCancel(subscriptionId: string, actorUserId: string) {
+    const subscription = await this.getById(subscriptionId);
+
+    if (!['QUOTATION', 'CONFIRMED', 'ACTIVE'].includes(subscription.status)) {
+      throw new BusinessRuleError(
+        'Subscription can only be cancelled from QUOTATION, CONFIRMED, or ACTIVE status'
+      );
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.subscription.update({
+        where: { id: subscriptionId },
+        data: {
+          status: 'CLOSED',
+          endDate: new Date(),
+        },
+        include: {
+          plan: true,
+        },
+      });
+
+      await this.auditService.logStatusChange(
+        actorUserId,
+        'SUBSCRIPTION',
+        subscriptionId,
+        subscription.status,
+        'CLOSED',
+        tx
+      );
+
+      return updated;
+    });
+  }
+
+  /**
+   * Renew a closed subscription → creates a new DRAFT subscription
+   */
+  async actionRenew(subscriptionId: string, actorUserId: string) {
+    const subscription = await this.getById(subscriptionId, {
+      plan: true,
+      lines: {
+        include: {
+          variant: true,
+          discount: true,
+          taxRate: true,
+        },
+      },
+    });
+
+    if (subscription.status === 'DRAFT') {
+      throw new BusinessRuleError('DRAFT subscriptions cannot be renewed');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      // Compute dates for the renewed subscription
+      const now = new Date();
+      const nextBillingDate = calculateNextBillingDate(
+        now,
+        subscription.plan.billingPeriod,
+        subscription.plan.intervalCount
+      );
+
+      // Create new subscription based on old one
+      const newSubscription = await tx.subscription.create({
+        data: {
+          subscriptionNumber: generateSubscriptionNumber(),
+          userId: subscription.userId,
+          planId: subscription.planId,
+          status: 'DRAFT',
+          startDate: now,
+          orderDate: now,
+          nextBillingDate,
+          quotationTemplate: subscription.quotationTemplate,
+          paymentTermDays: subscription.paymentTermDays,
+          paymentMethod: subscription.paymentMethod,
+          salespersonId: subscription.salespersonId,
+          notes: `Renewed from ${subscription.subscriptionNumber}`,
+        },
+      });
+
+      // Copy line items
+      if (subscription.lines && subscription.lines.length > 0) {
+        for (const line of subscription.lines) {
+          await tx.subscriptionLine.create({
+            data: {
+              subscriptionId: newSubscription.id,
+              variantId: line.variantId,
+              quantity: line.quantity,
+              unitPrice: line.unitPrice,
+              discountId: line.discountId,
+              taxRateId: line.taxRateId,
+            },
+          });
+        }
+      }
+
+      const result = await tx.subscription.findUnique({
+        where: { id: newSubscription.id },
+        include: {
+          plan: true,
+          user: { select: { id: true, email: true, name: true } },
+          salesperson: { select: { id: true, email: true, name: true } },
+          lines: {
+            include: {
+              variant: { include: { product: true } },
+              discount: true,
+              taxRate: true,
+            },
+          },
+        },
+      });
+
+      await this.auditService.log(
+        {
+          userId: actorUserId,
+          entityType: 'SUBSCRIPTION',
+          entityId: newSubscription.id,
+          action: 'RENEWED',
+          newValue: { renewedFrom: subscriptionId },
+        },
+        tx
+      );
+
+      return result;
     });
   }
 
@@ -321,6 +572,13 @@ export class SubscriptionService {
         include: {
           plan: true,
           user: { select: { id: true, email: true, name: true } },
+          salesperson: { select: { id: true, email: true, name: true } },
+          lines: {
+            include: {
+              discount: true,
+              taxRate: true,
+            },
+          },
           _count: { select: { lines: true, invoices: true } },
         },
         orderBy: { createdAt: 'desc' },

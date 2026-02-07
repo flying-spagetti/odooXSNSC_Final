@@ -40,26 +40,33 @@ export function FormDialog({
     onSubmit?.();
   };
 
+  const content = hideFooter ? (
+    <>
+      <ModalHeader>{title}</ModalHeader>
+      <ModalCloseButton />
+      <ModalBody>{children}</ModalBody>
+    </>
+  ) : (
+    <form onSubmit={handleSubmit}>
+      <ModalHeader>{title}</ModalHeader>
+      <ModalCloseButton />
+      <ModalBody>{children}</ModalBody>
+      <ModalFooter>
+        <Button variant="outline" onClick={onClose} disabled={isLoading} className="mr-3">
+          {cancelText}
+        </Button>
+        <Button type="submit" disabled={isLoading}>
+          {isLoading ? 'Processing...' : submitText}
+        </Button>
+      </ModalFooter>
+    </form>
+  );
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} size={size}>
       <ModalOverlay />
       <ModalContent>
-        <form onSubmit={handleSubmit}>
-          <ModalHeader>{title}</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>{children}</ModalBody>
-
-          {!hideFooter && (
-            <ModalFooter>
-              <Button variant="outline" onClick={onClose} disabled={isLoading} className="mr-3">
-                {cancelText}
-              </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? 'Processing...' : submitText}
-              </Button>
-            </ModalFooter>
-          )}
-        </form>
+        {content}
       </ModalContent>
     </Modal>
   );

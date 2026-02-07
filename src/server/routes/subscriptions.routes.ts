@@ -14,6 +14,21 @@ const CreateSubscriptionSchema = z.object({
   userId: z.string(),
   planId: z.string(),
   notes: z.string().optional(),
+  quotationTemplate: z.string().optional(),
+  expirationDate: z.string().optional(),
+  paymentTermDays: z.number().int().positive().optional(),
+  paymentMethod: z.enum(['BANK_TRANSFER', 'CREDIT_CARD', 'CASH', 'CHECK', 'OTHER']).optional(),
+  salespersonId: z.string().optional(),
+});
+
+const UpdateSubscriptionSchema = z.object({
+  quotationTemplate: z.string().optional(),
+  expirationDate: z.string().optional(),
+  paymentTermDays: z.number().int().positive().optional(),
+  paymentMethod: z.enum(['BANK_TRANSFER', 'CREDIT_CARD', 'CASH', 'CHECK', 'OTHER']).optional(),
+  paymentDone: z.boolean().optional(),
+  salespersonId: z.string().optional(),
+  notes: z.string().optional(),
 });
 
 const AddLineSchema = z.object({
@@ -86,12 +101,16 @@ const subscriptionsRoutes: FastifyPluginAsync = async (fastify) => {
       const subscription = await subscriptionService.getById(params.id, {
         plan: true,
         user: { select: { id: true, email: true, name: true } },
+        salesperson: { select: { id: true, email: true, name: true } },
         lines: {
           include: {
             variant: { include: { product: true } },
             discount: true,
             taxRate: true,
           },
+        },
+        invoices: {
+          orderBy: { createdAt: 'desc' },
         },
       });
 
@@ -100,6 +119,59 @@ const subscriptionsRoutes: FastifyPluginAsync = async (fastify) => {
         throw new ForbiddenError('subscriptions:read', 'Cannot access other users subscriptions');
       }
 
+      return { subscription };
+    }
+  );
+
+  // Update subscription
+  fastify.patch(
+    '/:id',
+    {
+      onRequest: [fastify.authenticate, fastify.authorize('subscriptions:update')],
+    },
+    async (request, reply) => {
+      const params = z.object({ id: z.string() }).parse(request.params);
+      const data = UpdateSubscriptionSchema.parse(request.body);
+      const subscription = await subscriptionService.update(params.id, data, request.user!.userId);
+      return { subscription };
+    }
+  );
+
+  // Delete subscription (only DRAFT)
+  fastify.delete(
+    '/:id',
+    {
+      onRequest: [fastify.authenticate, fastify.authorize('subscriptions:delete')],
+    },
+    async (request, reply) => {
+      const params = z.object({ id: z.string() }).parse(request.params);
+      await subscriptionService.delete(params.id, request.user!.userId);
+      return { success: true };
+    }
+  );
+
+  // Action: Cancel
+  fastify.post(
+    '/:id/actions/cancel',
+    {
+      onRequest: [fastify.authenticate, fastify.authorize('subscriptions:actions')],
+    },
+    async (request, reply) => {
+      const params = z.object({ id: z.string() }).parse(request.params);
+      const subscription = await subscriptionService.actionCancel(params.id, request.user!.userId);
+      return { subscription };
+    }
+  );
+
+  // Action: Renew
+  fastify.post(
+    '/:id/actions/renew',
+    {
+      onRequest: [fastify.authenticate, fastify.authorize('subscriptions:actions')],
+    },
+    async (request, reply) => {
+      const params = z.object({ id: z.string() }).parse(request.params);
+      const subscription = await subscriptionService.actionRenew(params.id, request.user!.userId);
       return { subscription };
     }
   );
@@ -142,7 +214,7 @@ const subscriptionsRoutes: FastifyPluginAsync = async (fastify) => {
       const params = z.object({ id: z.string() }).parse(request.params);
       const body = z
         .object({
-          startDate: z.string().datetime().optional(),
+          startDate: z.string().optional(),
         })
         .parse(request.body);
 

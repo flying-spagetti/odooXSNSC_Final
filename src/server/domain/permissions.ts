@@ -48,6 +48,11 @@ export type Permission =
   | 'discounts:read'
   | 'discounts:update'
   | 'discounts:delete'
+  // Templates
+  | 'templates:create'
+  | 'templates:read'
+  | 'templates:update'
+  | 'templates:delete'
   // Reports
   | 'reports:read';
 
@@ -93,6 +98,10 @@ export const RolePermissions: Record<Role, Permission[]> = {
     'discounts:read',
     'discounts:update',
     'discounts:delete',
+    'templates:create',
+    'templates:read',
+    'templates:update',
+    'templates:delete',
     'reports:read',
   ],
   INTERNAL: [
@@ -114,6 +123,7 @@ export const RolePermissions: Record<Role, Permission[]> = {
     'payments:read:all',
     'taxes:read',
     'discounts:read',
+    'templates:read',
     'reports:read',
   ],
   PORTAL: [

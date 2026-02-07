@@ -93,7 +93,7 @@ export default function Login() {
               </Link>
             </p>
           </div>
-
+          {/* Demo Accounts *
           <div className="mt-6 border-t pt-6 space-y-4">
             <p className="text-xs text-muted-foreground text-center mb-3">Demo Accounts:</p>
             <div className="space-y-2 text-xs">
@@ -105,9 +105,12 @@ export default function Login() {
               </div>
               <div className="bg-gray-100 p-2 rounded">
                 <strong>Customer:</strong> customer@example.com / portal123
+            
               </div>
+              
             </div>
           </div>
+          */}
         </CardContent>
       </Card>
     </Box>

@@ -57,6 +57,7 @@ export class ProductService {
       this.prisma.product.findMany({
         where,
         include: {
+          variants: true,
           _count: { select: { variants: true } },
         },
         orderBy: { createdAt: 'desc' },

@@ -12,7 +12,7 @@ export type InvoiceStatus = 'DRAFT' | 'CONFIRMED' | 'PAID' | 'CANCELED';
  */
 export const SubscriptionTransitions: Record<SubscriptionStatus, SubscriptionStatus[]> = {
   DRAFT: ['QUOTATION'],
-  QUOTATION: ['CONFIRMED', 'DRAFT'],
+  QUOTATION: ['CONFIRMED', 'DRAFT', 'CLOSED'],
   CONFIRMED: ['ACTIVE', 'CLOSED'],
   ACTIVE: ['CLOSED'],
   CLOSED: [], // Terminal state
@@ -48,7 +48,7 @@ export const SubscriptionActions = {
   QUOTE: { from: ['DRAFT'], to: 'QUOTATION' as SubscriptionStatus },
   CONFIRM: { from: ['QUOTATION'], to: 'CONFIRMED' as SubscriptionStatus },
   ACTIVATE: { from: ['CONFIRMED'], to: 'ACTIVE' as SubscriptionStatus },
-  CLOSE: { from: ['CONFIRMED', 'ACTIVE'], to: 'CLOSED' as SubscriptionStatus },
+  CLOSE: { from: ['QUOTATION', 'CONFIRMED', 'ACTIVE'], to: 'CLOSED' as SubscriptionStatus },
 } as const;
 
 export const InvoiceActions = {

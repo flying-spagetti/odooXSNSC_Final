@@ -19,6 +19,10 @@ import SubscriptionDetailPage from './pages/subscriptions/SubscriptionDetailPage
 import CreateSubscriptionPage from './pages/subscriptions/CreateSubscriptionPage';
 import InvoicesPage from './pages/invoices/InvoicesPage';
 import InvoiceDetailPage from './pages/invoices/InvoiceDetailPage';
+import ReportingPage from './pages/ReportingPage';
+import UsersContactsPage from './pages/UsersContactsPage';
+import ConfigurationPage from './pages/ConfigurationPage';
+import MyProfilePage from './pages/MyProfilePage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -33,6 +37,7 @@ function App() {
   const { initializeAuth } = useAuthStore();
 
   useEffect(() => {
+    // initializeAuth is now async – verifies JWT with server on startup
     initializeAuth();
   }, [initializeAuth]);
 
@@ -130,6 +135,54 @@ function App() {
                 <ProtectedRoute>
                   <Layout>
                     <InvoiceDetailPage />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Reporting */}
+            <Route
+              path="/reporting"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <ReportingPage />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Users / Contacts */}
+            <Route
+              path="/users-contacts"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <UsersContactsPage />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Configuration */}
+            <Route
+              path="/configuration"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <ConfigurationPage />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* My Profile */}
+            <Route
+              path="/my-profile"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <MyProfilePage />
                   </Layout>
                 </ProtectedRoute>
               }
