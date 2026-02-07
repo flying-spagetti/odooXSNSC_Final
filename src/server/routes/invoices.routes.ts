@@ -41,21 +41,11 @@ const invoicesRoutes: FastifyPluginAsync = async (fastify) => {
 
       const result = await invoiceService.list({
         subscriptionId: query.subscriptionId,
+        userId: request.user!.role === 'PORTAL' ? request.user!.userId : undefined,
         status: query.status as any,
         limit: query.limit,
         offset: query.offset,
       });
-
-      // For PORTAL users, filter to only their invoices
-      if (request.user!.role === 'PORTAL') {
-        result.items = result.items.filter((invoice) =>
-          canAccessResource(
-            request.user!.role,
-            invoice.subscription.userId,
-            request.user!.userId
-          )
-        );
-      }
 
       return result;
     }
@@ -144,6 +134,19 @@ const invoicesRoutes: FastifyPluginAsync = async (fastify) => {
     },
     async (request, reply) => {
       const params = z.object({ id: z.string() }).parse(request.params);
+
+      const invoice = await invoiceService.getById(params.id);
+
+      if (
+        !canAccessResource(
+          request.user!.role,
+          invoice.subscription.userId,
+          request.user!.userId
+        )
+      ) {
+        throw new ForbiddenError('payments:read', 'Cannot access other users payments');
+      }
+
       const payments = await paymentService.listByInvoice(params.id);
       return { payments };
     }
