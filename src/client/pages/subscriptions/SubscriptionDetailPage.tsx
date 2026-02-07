@@ -331,32 +331,30 @@ export default function SubscriptionDetailPage() {
             </Button>
           )}
 
-          {(['CONFIRMED', 'ACTIVE', 'CLOSED'].includes(subscription.status)) && (
-            <Button size="sm" variant="outline" onClick={() => {
-              window.open(`/subscriptions/${id}`, '_blank');
-            }}>
-              <Eye className="h-4 w-4 mr-1" /> Preview
-            </Button>
-          )}
+          <Button size="sm" variant="outline" onClick={() => {
+            window.open(`/subscriptions/${id}/preview`, '_blank');
+          }}>
+            <Eye className="h-4 w-4 mr-1" /> Preview
+          </Button>
         </Flex>
 
         {/* Status state badges */}
         <Flex gap={2} align="center">
           <Badge
-            variant={statusStepIndex >= 0 ? 'default' : 'outline'}
-            className={statusStepIndex >= 1 ? 'bg-primary text-primary-foreground' : statusStepIndex === 0 ? 'border-primary text-primary border-dashed border-2' : ''}
+            variant={statusStepIndex >= 1 ? 'default' : 'outline'}
+            className={statusStepIndex >= 1 ? 'bg-primary text-white' : statusStepIndex === 0 ? 'border-primary text-primary border-dashed border-2' : ''}
           >
             Quotation
           </Badge>
           <Badge
-            variant={statusStepIndex >= 1 ? 'default' : 'outline'}
-            className={statusStepIndex >= 2 ? 'bg-primary text-primary-foreground' : statusStepIndex === 1 ? 'border-primary text-primary border-dashed border-2' : ''}
+            variant={statusStepIndex >= 2 ? 'default' : 'outline'}
+            className={statusStepIndex >= 2 ? 'bg-primary text-white' : statusStepIndex === 1 ? 'border-primary text-primary border-dashed border-2' : ''}
           >
             quotation sent
           </Badge>
           <Badge
             variant={statusStepIndex >= 2 ? 'default' : 'outline'}
-            className={statusStepIndex >= 2 ? 'bg-primary text-primary-foreground' : ''}
+            className={statusStepIndex >= 2 ? 'bg-primary text-white' : ''}
           >
             confirmed
           </Badge>
@@ -392,7 +390,7 @@ export default function SubscriptionDetailPage() {
           <Button
             size="sm"
             variant="outline"
-            onClick={() => navigate('/subscriptions/new')}
+            onClick={() => navigate(`/subscriptions/new?upsellFrom=${id}&userId=${subscription.userId}&planId=${subscription.planId}`)}
           >
             <TrendingUp className="h-4 w-4 mr-1" /> Upsell
           </Button>

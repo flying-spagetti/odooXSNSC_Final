@@ -17,6 +17,7 @@ import ProductDetailPage from './pages/products/ProductDetailPage';
 import SubscriptionsPage from './pages/subscriptions/SubscriptionsPage';
 import SubscriptionDetailPage from './pages/subscriptions/SubscriptionDetailPage';
 import CreateSubscriptionPage from './pages/subscriptions/CreateSubscriptionPage';
+import SubscriptionPreviewPage from './pages/subscriptions/SubscriptionPreviewPage';
 import InvoicesPage from './pages/invoices/InvoicesPage';
 import InvoiceDetailPage from './pages/invoices/InvoiceDetailPage';
 import ReportingPage from './pages/ReportingPage';
@@ -114,6 +115,14 @@ function App() {
                   <Layout>
                     <SubscriptionDetailPage />
                   </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/subscriptions/:id/preview"
+              element={
+                <ProtectedRoute>
+                  <SubscriptionPreviewPage />
                 </ProtectedRoute>
               }
             />

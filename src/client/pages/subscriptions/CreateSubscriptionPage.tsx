@@ -20,7 +20,7 @@ import {
   TabPanel,
   Checkbox,
 } from '@chakra-ui/react';
-import { ArrowLeft, Plus, Send, Check } from 'lucide-react';
+import { ArrowLeft, Plus, Send, Check, TrendingUp } from 'lucide-react';
 import { subscriptionApi, planApi, userApi, productApi, taxApi, discountApi, templateApi, ProductVariant } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -46,13 +46,19 @@ interface LineItem {
 
 export default function CreateSubscriptionPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const toast = useToast();
   const { user: currentUser } = useAuthStore();
 
+  // Read upsell pre-fill params from URL
+  const upsellFromId = searchParams.get('upsellFrom');
+  const prefillUserId = searchParams.get('userId');
+  const prefillPlanId = searchParams.get('planId');
+
   // Main form state
-  const [selectedUserId, setSelectedUserId] = useState('');
-  const [selectedPlanId, setSelectedPlanId] = useState('');
+  const [selectedUserId, setSelectedUserId] = useState(prefillUserId || '');
+  const [selectedPlanId, setSelectedPlanId] = useState(prefillPlanId || '');
   const [quotationTemplate, setQuotationTemplate] = useState('');
   const [expirationDate, setExpirationDate] = useState('');
   const [paymentTermDays, setPaymentTermDays] = useState('');
@@ -331,14 +337,26 @@ export default function CreateSubscriptionPage() {
     <Box>
       {/* Back button */}
       <Flex align="center" gap={4} className="mb-4">
-        <Button variant="outline" size="sm" onClick={() => navigate('/subscriptions')}>
+        <Button variant="outline" size="sm" onClick={() => upsellFromId ? navigate(`/subscriptions/${upsellFromId}`) : navigate('/subscriptions')}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back
         </Button>
         <div>
-          <h1 className="text-3xl font-bold">Create Subscription</h1>
+          <h1 className="text-3xl font-bold">{upsellFromId ? 'Upsell — New Subscription' : 'Create Subscription'}</h1>
+          {upsellFromId && (
+            <p className="text-sm text-muted-foreground">Upgrade or change products for the customer</p>
+          )}
         </div>
       </Flex>
+
+      {upsellFromId && (
+        <Box className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-blue-800 text-sm font-medium">
+            <TrendingUp className="h-4 w-4 inline mr-1" />
+            This is an upsell from an existing subscription. Customer and plan have been pre-filled. Choose new or upgraded products below.
+          </p>
+        </Box>
+      )}
 
       {/* Template Selector */}
       {templates.length > 0 && (
