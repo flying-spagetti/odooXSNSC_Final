@@ -81,6 +81,7 @@ async function buildServer() {
   await fastify.register(discountsRoutes, { prefix: '/api/v1/discounts' });
   await fastify.register(reportsRoutes, { prefix: '/api/v1/reports' });
   await fastify.register(templatesRoutes, { prefix: '/api/v1/templates' });
+  await fastify.register(paymentsRoutes, { prefix: '/api/v1/payments' });
 
   return fastify;
 }

@@ -127,11 +127,14 @@ export const RolePermissions: Record<Role, Permission[]> = {
     'reports:read',
   ],
   PORTAL: [
-    // Portal users: can only view their own subscriptions and invoices
+    // Portal users: can view their own subscriptions and invoices, and create subscriptions for themselves
     'products:read',
     'plans:read',
+    'subscriptions:create', // Allow portal users to create subscriptions (self-service checkout)
     'subscriptions:read',
+    'subscriptions:update', // Allow portal users to update their own subscriptions (add lines, etc.)
     'invoices:read',
+    'payments:create', // Allow portal users to make payments
     'payments:read',
   ],
 };

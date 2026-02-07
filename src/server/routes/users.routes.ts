@@ -68,6 +68,32 @@ const usersRoutes: FastifyPluginAsync = async (fastify) => {
       return { user };
     }
   );
+
+  // Update user profile (for portal users to update their own profile)
+  fastify.patch(
+    '/:id/profile',
+    {
+      onRequest: [fastify.authenticate],
+    },
+    async (request, reply) => {
+      const params = z.object({ id: z.string() }).parse(request.params);
+      const body = z
+        .object({
+          name: z.string().min(2).optional(),
+          phone: z.string().optional(),
+          address: z.string().optional(),
+        })
+        .parse(request.body);
+
+      // Portal users can only update their own profile
+      if (request.user!.role === 'PORTAL' && params.id !== request.user!.userId) {
+        return reply.code(403).send({ error: 'Forbidden' });
+      }
+
+      const user = await userService.updateProfile(params.id, body);
+      return { user };
+    }
+  );
 };
 
 export default usersRoutes;

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -20,19 +21,33 @@ import {
   NumberDecrementStepper,
   useToast,
   Badge,
+  Input,
+  InputGroup,
+  InputRightElement,
+  Progress,
 } from '@chakra-ui/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Trash2, ShoppingBag, ArrowLeft } from 'lucide-react';
+import { Trash2, ShoppingBag, ArrowLeft, ArrowRight } from 'lucide-react';
 import { useCartStore } from '@/store/cartStore';
 import { useAuthStore } from '@/store/authStore';
-import { subscriptionApi } from '@/lib/api';
-import { useMutation } from '@tanstack/react-query';
+import { useCheckoutStore } from '@/store/checkoutStore';
+import { subscriptionApi, discountApi } from '@/lib/api';
+import { useMutation, useQuery } from '@tanstack/react-query';
 
 export default function CartPage() {
   const navigate = useNavigate();
   const toast = useToast();
   const { user } = useAuthStore();
   const { items, updateQuantity, removeItem, clearCart, getTotalPrice } = useCartStore();
+  const { setSubscriptionId, setStep } = useCheckoutStore();
+  const [discountCode, setDiscountCode] = useState('');
+  const [appliedDiscount, setAppliedDiscount] = useState<any>(null);
+
+  // Fetch discounts for code lookup
+  const { data: discountsData } = useQuery({
+    queryKey: ['discounts'],
+    queryFn: () => discountApi.list({ limit: 100 }),
+  });
 
   const createSubscriptionMutation = useMutation({
     mutationFn: async (cartItems: typeof items) => {
@@ -45,42 +60,35 @@ export default function CartPage() {
         return acc;
       }, {} as Record<string, typeof items>);
 
-      // Create a subscription for each plan
-      const subscriptions = await Promise.all(
-        Object.entries(itemsByPlan).map(async ([planId, planItems]) => {
-          // Create subscription
-          const subscriptionRes = await subscriptionApi.create({
-            userId: user!.id,
-            planId,
-            notes: `Created from cart with ${planItems.length} items`,
-          });
+      // Create a subscription for each plan (take first one for now)
+      const firstPlanId = Object.keys(itemsByPlan)[0];
+      const planItems = itemsByPlan[firstPlanId];
 
-          // Add line items
-          await Promise.all(
-            planItems.map((item) =>
-              subscriptionApi.addLine(subscriptionRes.data.subscription.id, {
-                variantId: item.variantId,
-                quantity: item.quantity,
-                unitPrice: item.unitPrice,
-              })
-            )
-          );
+      // Create subscription
+      const subscriptionRes = await subscriptionApi.create({
+        userId: user!.id,
+        planId: firstPlanId,
+        notes: `Created from cart with ${planItems.length} items`,
+      });
 
-          return subscriptionRes.data.subscription;
-        })
+      // Add line items
+      await Promise.all(
+        planItems.map((item) =>
+          subscriptionApi.addLine(subscriptionRes.data.subscription.id, {
+            variantId: item.variantId,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            discountId: appliedDiscount?.id,
+          })
+        )
       );
 
-      return subscriptions;
+      return subscriptionRes.data.subscription;
     },
-    onSuccess: () => {
-      clearCart();
-      toast({
-        title: 'Subscription created',
-        description: 'Your subscription has been created successfully',
-        status: 'success',
-        duration: 3000,
-      });
-      navigate('/portal/subscriptions');
+    onSuccess: (subscription) => {
+      setSubscriptionId(subscription.id);
+      setStep('address');
+      navigate('/portal/checkout/address');
     },
     onError: (error: any) => {
       toast({
@@ -105,6 +113,39 @@ export default function CartPage() {
     });
   };
 
+  const handleApplyDiscount = () => {
+    if (!discountCode.trim()) {
+      toast({
+        title: 'Please enter a discount code',
+        status: 'warning',
+        duration: 3000,
+      });
+      return;
+    }
+
+    // Find discount by name (assuming discount code is the name)
+    const discount = discountsData?.data.items.find(
+      (d) => d.name.toLowerCase() === discountCode.toLowerCase() && d.isActive
+    );
+
+    if (discount) {
+      setAppliedDiscount(discount);
+      toast({
+        title: 'Discount applied',
+        description: `You have successfully applied ${discount.name}`,
+        status: 'success',
+        duration: 3000,
+      });
+    } else {
+      toast({
+        title: 'Invalid discount code',
+        description: 'The discount code you entered is not valid',
+        status: 'error',
+        duration: 3000,
+      });
+    }
+  };
+
   const handleCheckout = () => {
     if (items.length === 0) {
       toast({
@@ -117,6 +158,37 @@ export default function CartPage() {
 
     createSubscriptionMutation.mutate(items);
   };
+
+  const handleBravePanther = () => {
+    // Skip to order confirmation (for testing)
+    if (items.length === 0) {
+      toast({
+        title: 'Cart is empty',
+        status: 'warning',
+        duration: 3000,
+      });
+      return;
+    }
+    // Create subscription and navigate directly to confirmation
+    createSubscriptionMutation.mutate(items);
+    // This will be handled after subscription creation
+    setTimeout(() => {
+      navigate('/portal/checkout/confirmation');
+    }, 1000);
+  };
+
+  // Calculate totals
+  const subtotal = getTotalPrice();
+  const discountAmount = appliedDiscount
+    ? appliedDiscount.type === 'PERCENTAGE'
+      ? subtotal * (parseFloat(appliedDiscount.value) / 100)
+      : parseFloat(appliedDiscount.value)
+    : 0;
+  const afterDiscount = subtotal - discountAmount;
+  // Assuming 15% tax for now (should come from tax rates)
+  const taxRate = 15;
+  const taxAmount = afterDiscount * (taxRate / 100);
+  const total = afterDiscount + taxAmount;
 
   if (items.length === 0) {
     return (
@@ -148,6 +220,22 @@ export default function CartPage() {
           Continue Shopping
         </Button>
       </Flex>
+
+      {/* Progress Indicator */}
+      <Box mb={6}>
+        <Flex justify="space-between" align="center" mb={2}>
+          <Text fontSize="sm" fontWeight="semibold" textDecoration="underline">
+            Order
+          </Text>
+          <Text fontSize="sm" color="gray.500">
+            Address
+          </Text>
+          <Text fontSize="sm" color="gray.500">
+            Payment
+          </Text>
+        </Flex>
+        <Progress value={33} size="sm" colorScheme="blue" />
+      </Box>
 
       <Flex gap={6} direction={{ base: 'column', lg: 'row' }}>
         {/* Cart Items */}
@@ -189,9 +277,7 @@ export default function CartPage() {
                           )}
                         </VStack>
                       </Td>
-                      <Td isNumeric>
-                        ${item.unitPrice.toFixed(2)}/month
-                      </Td>
+                      <Td isNumeric>₹{item.unitPrice.toFixed(2)}/month</Td>
                       <Td>
                         <NumberInput
                           value={item.quantity}
@@ -211,7 +297,7 @@ export default function CartPage() {
                         </NumberInput>
                       </Td>
                       <Td isNumeric fontWeight="semibold">
-                        ${item.totalPrice.toFixed(2)}
+                        ₹{item.totalPrice.toFixed(2)}
                       </Td>
                       <Td>
                         <Button
@@ -227,6 +313,45 @@ export default function CartPage() {
                   ))}
                 </Tbody>
               </Table>
+
+              {/* Discount Code Section */}
+              <Box mt={6} pt={6} borderTop="1px solid" borderColor="gray.200">
+                <VStack align="stretch" spacing={3}>
+                  <Text fontWeight="semibold">Discount Code</Text>
+                  <InputGroup>
+                    <Input
+                      placeholder="Enter discount code"
+                      value={discountCode}
+                      onChange={(e) => setDiscountCode(e.target.value)}
+                    />
+                    <InputRightElement width="80px">
+                      <Button size="sm" colorScheme="blue" onClick={handleApplyDiscount}>
+                        Apply
+                      </Button>
+                    </InputRightElement>
+                  </InputGroup>
+                  {appliedDiscount && (
+                    <Text fontSize="sm" color="green.600">
+                      You have successfully applied {appliedDiscount.name}
+                    </Text>
+                  )}
+                </VStack>
+              </Box>
+
+              {/* Brave Panther Button */}
+              <Box mt={4}>
+                <Button
+                  variant="outline"
+                  colorScheme="blue"
+                  rightIcon={<ArrowRight className="h-4 w-4" />}
+                  onClick={handleBravePanther}
+                >
+                  Brave Panther
+                </Button>
+                <Text fontSize="xs" color="gray.500" mt={1}>
+                  (extra price)
+                </Text>
+              </Box>
             </CardContent>
           </Card>
         </Box>
@@ -241,11 +366,19 @@ export default function CartPage() {
               <VStack align="stretch" spacing={4}>
                 <Flex justify="space-between">
                   <Text>Subtotal</Text>
-                  <Text fontWeight="semibold">${getTotalPrice().toFixed(2)}</Text>
+                  <Text fontWeight="semibold">₹{subtotal.toFixed(2)}</Text>
                 </Flex>
+                {appliedDiscount && (
+                  <Flex justify="space-between">
+                    <Text color="green.600">Discount ({appliedDiscount.name})</Text>
+                    <Text color="green.600" fontWeight="semibold">
+                      -₹{discountAmount.toFixed(2)}
+                    </Text>
+                  </Flex>
+                )}
                 <Flex justify="space-between">
-                  <Text>Tax</Text>
-                  <Text>$0.00</Text>
+                  <Text>Taxes ({taxRate}%)</Text>
+                  <Text>₹{taxAmount.toFixed(2)}</Text>
                 </Flex>
                 <Box borderTop="1px solid" borderColor="gray.200" pt={4}>
                   <Flex justify="space-between">
@@ -253,7 +386,7 @@ export default function CartPage() {
                       Total
                     </Text>
                     <Text fontSize="lg" fontWeight="bold">
-                      ${getTotalPrice().toFixed(2)}
+                      ₹{total.toFixed(2)}
                     </Text>
                   </Flex>
                 </Box>

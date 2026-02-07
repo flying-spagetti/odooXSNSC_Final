@@ -87,6 +87,8 @@ export class UserService {
         id: true,
         email: true,
         name: true,
+        phone: true,
+        address: true,
         role: true,
         isActive: true,
         createdAt: true,
@@ -113,6 +115,8 @@ export class UserService {
           id: true,
           email: true,
           name: true,
+          phone: true,
+          address: true,
           role: true,
           isActive: true,
           createdAt: true,
@@ -223,5 +227,32 @@ export class UserService {
     });
 
     return !!user;
+  }
+
+  /**
+   * Update user profile (name, phone, address)
+   */
+  async updateProfile(userId: string, data: { name?: string; phone?: string; address?: string }) {
+    const user = await this.getById(userId);
+
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        name: data.name ?? user.name,
+        phone: data.phone,
+        address: data.address,
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        phone: true,
+        address: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
   }
 }

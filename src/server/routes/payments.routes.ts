@@ -53,7 +53,12 @@ const paymentsRoutes: FastifyPluginAsync = async (fastify) => {
 
       // If subscriptionId is provided, create invoice first if needed
       if (data.subscriptionId && !data.invoiceId) {
-        const subscription = await subscriptionService.getById(data.subscriptionId);
+        let subscription = await subscriptionService.getById(data.subscriptionId);
+        
+        // If subscription is DRAFT, confirm it first
+        if (subscription.status === 'DRAFT') {
+          subscription = await subscriptionService.actionConfirm(data.subscriptionId, request.user!.userId);
+        }
         
         // Generate invoice for current period if subscription is confirmed/active
         if (['CONFIRMED', 'ACTIVE'].includes(subscription.status)) {
@@ -66,7 +71,7 @@ const paymentsRoutes: FastifyPluginAsync = async (fastify) => {
           
           // Confirm invoice
           if (invoice.status === 'DRAFT') {
-            await invoiceService.confirm(invoice.id, request.user!.userId);
+            await invoiceService.actionConfirm(invoice.id, request.user!.userId);
           }
           
           amount = parseFloat(invoice.total.toString()) - parseFloat(invoice.paidAmount.toString());
@@ -85,11 +90,11 @@ const paymentsRoutes: FastifyPluginAsync = async (fastify) => {
           userId: request.user!.userId,
         },
       });
-
       return {
         order,
         invoiceId: data.invoiceId,
         subscriptionId: data.subscriptionId,
+        keyId: process.env.RAZORPAY_KEY_ID, // Return the key_id so frontend uses the same key that created the order
       };
     }
   );

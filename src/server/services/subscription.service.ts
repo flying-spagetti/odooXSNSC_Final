@@ -51,15 +51,6 @@ export interface AddLineData {
 }
 
 
-interface MoreAddLineData extends AddLineData {
-  productId: "Product1",
-  variantId: string;
-  quantity: number;
-  unitPrice: number;
-  discountId?: string;
-  taxRateId?: string;
-  notes?: string;
-}
 
 
 
@@ -255,9 +246,13 @@ export class SubscriptionService {
       throw new BusinessRuleError('Cannot activate subscription without start date');
     }
 
+    if (!subscription.plan) {
+      throw new NotFoundError('RecurringPlan', subscription.planId);
+    }
+
     return this.prisma.$transaction(async (tx) => {
       const nextBillingDate = calculateNextBillingDate(
-        subscription.startDate,
+        subscription.startDate!,
         subscription.plan.billingPeriod,
         subscription.plan.intervalCount
       );
@@ -288,7 +283,7 @@ export class SubscriptionService {
         subscriptionId,
         subscription.status,
         'ACTIVE',
-        this.prisma
+        tx
       );
 
       return updated;
@@ -688,7 +683,4 @@ export class SubscriptionService {
   }
 }
 
-async function PrintMoreAddLineData(moreAddLineData: MoreAddLineData) {
-  console.log(moreAddLineData);
-}
-PrintMoreAddLineData()
+// Removed unused function

@@ -33,6 +33,12 @@ import HomePage from './pages/portal/HomePage';
 import ShopPage from './pages/portal/ShopPage';
 import PortalProductDetailPage from './pages/portal/ProductDetailPage';
 import CartPage from './pages/portal/CartPage';
+import AddressPage from './pages/portal/AddressPage';
+import PaymentPage from './pages/portal/PaymentPage';
+import OrderConfirmationPage from './pages/portal/OrderConfirmationPage';
+import OrderDetailPage from './pages/portal/OrderDetailPage';
+import OrdersPage from './pages/portal/OrdersPage';
+import UserDetailsPage from './pages/portal/UserDetailsPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -279,6 +285,66 @@ function App() {
                 <ProtectedRoute>
                   <PortalLayout>
                     <SubscriptionsPage />
+                  </PortalLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/portal/checkout/address"
+              element={
+                <ProtectedRoute>
+                  <PortalLayout>
+                    <AddressPage />
+                  </PortalLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/portal/checkout/payment"
+              element={
+                <ProtectedRoute>
+                  <PortalLayout>
+                    <PaymentPage />
+                  </PortalLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/portal/checkout/confirmation"
+              element={
+                <ProtectedRoute>
+                  <PortalLayout>
+                    <OrderConfirmationPage />
+                  </PortalLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/portal/orders"
+              element={
+                <ProtectedRoute>
+                  <PortalLayout>
+                    <OrdersPage />
+                  </PortalLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/portal/orders/:id"
+              element={
+                <ProtectedRoute>
+                  <PortalLayout>
+                    <OrderDetailPage />
+                  </PortalLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/portal/user-details"
+              element={
+                <ProtectedRoute>
+                  <PortalLayout>
+                    <UserDetailsPage />
                   </PortalLayout>
                 </ProtectedRoute>
               }

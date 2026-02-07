@@ -52,6 +52,15 @@ const subscriptionsRoutes: FastifyPluginAsync = async (fastify) => {
     },
     async (request, reply) => {
       const data = CreateSubscriptionSchema.parse(request.body);
+      
+      // PORTAL users can only create subscriptions for themselves
+      if (request.user!.role === 'PORTAL' && data.userId !== request.user!.userId) {
+        throw new ForbiddenError(
+          'subscriptions:create',
+          'PORTAL users can only create subscriptions for themselves'
+        );
+      }
+      
       const subscription = await subscriptionService.create(data, request.user!.userId);
       return { subscription };
     }
@@ -132,6 +141,18 @@ const subscriptionsRoutes: FastifyPluginAsync = async (fastify) => {
     async (request, reply) => {
       const params = z.object({ id: z.string() }).parse(request.params);
       const data = UpdateSubscriptionSchema.parse(request.body);
+
+      // PORTAL users can only update their own subscriptions
+      if (request.user!.role === 'PORTAL') {
+        const subscription = await subscriptionService.getById(params.id);
+        if (!canAccessResource(request.user!.role, subscription.userId, request.user!.userId)) {
+          throw new ForbiddenError(
+            'subscriptions:update',
+            'PORTAL users can only update their own subscriptions'
+          );
+        }
+      }
+
       const subscription = await subscriptionService.update(params.id, data, request.user!.userId);
       return { subscription };
     }
@@ -185,6 +206,17 @@ const subscriptionsRoutes: FastifyPluginAsync = async (fastify) => {
     async (request, reply) => {
       const params = z.object({ id: z.string() }).parse(request.params);
       const data = AddLineSchema.parse(request.body);
+
+      // PORTAL users can only add lines to their own subscriptions
+      if (request.user!.role === 'PORTAL') {
+        const subscription = await subscriptionService.getById(params.id);
+        if (!canAccessResource(request.user!.role, subscription.userId, request.user!.userId)) {
+          throw new ForbiddenError(
+            'subscriptions:update',
+            'PORTAL users can only update their own subscriptions'
+          );
+        }
+      }
 
       const line = await subscriptionService.addLine(params.id, data, request.user!.userId);
       return { line };
@@ -302,6 +334,42 @@ const subscriptionsRoutes: FastifyPluginAsync = async (fastify) => {
       );
 
       return { invoice };
+    }
+  );
+
+  // Generate PDF for subscription
+  fastify.get(
+    '/:id/pdf',
+    {
+      onRequest: [fastify.authenticate, fastify.authorize('subscriptions:read')],
+    },
+    async (request, reply) => {
+      const params = z.object({ id: z.string() }).parse(request.params);
+      
+      // Get subscription with all details
+      const subscription = await subscriptionService.getById(params.id, {
+        plan: true,
+        user: { select: { id: true, email: true, name: true, phone: true, address: true } },
+        lines: {
+          include: {
+            variant: { include: { product: true } },
+            discount: true,
+            taxRate: true,
+          },
+        },
+        invoices: {
+          orderBy: { createdAt: 'desc' },
+          take: 5,
+        },
+      });
+
+      // Generate PDF
+      const { generateSubscriptionPDF } = await import('../utils/pdf-generator');
+      const pdfBuffer = await generateSubscriptionPDF(subscription as any);
+
+      reply.type('application/pdf');
+      reply.header('Content-Disposition', `attachment; filename="order-${subscription.subscriptionNumber}.pdf"`);
+      return pdfBuffer;
     }
   );
 };

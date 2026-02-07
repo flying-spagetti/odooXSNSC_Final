@@ -39,6 +39,8 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  phone?: string;
+  address?: string;
   role: 'ADMIN' | 'INTERNAL' | 'PORTAL';
   isActive: boolean;
   createdAt: string;
@@ -228,6 +230,9 @@ export const userApi = {
   
   create: (data: { email: string; password: string; name: string; role: 'INTERNAL' | 'PORTAL' }) =>
     api.post<{ user: User }>('/admin/users', data),
+  
+  updateProfile: (id: string, data: { name?: string; phone?: string; address?: string }) =>
+    api.patch<{ user: User }>(`/admin/users/${id}/profile`, data),
 };
 
 // Product APIs
@@ -497,4 +502,29 @@ export const discountApi = {
   
   delete: (id: string) =>
     api.delete(`/discounts/${id}`),
+};
+
+// Payment APIs (Razorpay)
+export const paymentApi = {
+  createOrder: (data: {
+    invoiceId?: string;
+    subscriptionId?: string;
+    amount: number;
+    currency?: string;
+    receipt?: string;
+    notes?: Record<string, string>;
+  }) => api.post<{ order: any; invoiceId?: string; subscriptionId?: string }>('/payments/create-order', data),
+
+  verifyPayment: (data: {
+    razorpay_order_id: string;
+    razorpay_payment_id: string;
+    razorpay_signature: string;
+    invoiceId: string;
+  }) => api.post<{ success: boolean; payment: any; invoice: any }>('/payments/verify', data),
+
+  getPayment: (paymentId: string) =>
+    api.get<{ payment: any }>(`/payments/${paymentId}`),
+
+  getOrder: (orderId: string) =>
+    api.get<{ order: any }>(`/payments/orders/${orderId}`),
 };
