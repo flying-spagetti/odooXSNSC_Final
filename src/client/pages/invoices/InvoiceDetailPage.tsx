@@ -62,6 +62,11 @@ export default function InvoiceDetailPage() {
     onOpen: onCancelOpen,
     onClose: onCancelClose,
   } = useDisclosure();
+  const {
+    isOpen: isDeleteOpen,
+    onOpen: onDeleteOpen,
+    onClose: onDeleteClose,
+  } = useDisclosure();
 
   const { data, isLoading } = useQuery({
     queryKey: ['invoice', id],
@@ -125,6 +130,25 @@ export default function InvoiceDetailPage() {
         title: 'Error',
         description:
           error.response?.data?.message || 'Failed to restore invoice',
+        status: 'error',
+        duration: 5000,
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => invoiceApi.delete(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      toast({ title: 'Invoice deleted', status: 'success', duration: 3000 });
+      onDeleteClose();
+      navigate('/invoices');
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description:
+          error.response?.data?.message || 'Failed to delete invoice',
         status: 'error',
         duration: 5000,
       });
@@ -232,7 +256,12 @@ export default function InvoiceDetailPage() {
         <Flex gap={2} wrap="wrap" align="center">
           {/* Delete icon (Draft and Confirmed) */}
           {(invoice.status === 'DRAFT' || invoice.status === 'CONFIRMED') && (
-            <Button size="sm" variant="ghost" title="Delete">
+            <Button 
+              size="sm" 
+              variant="ghost" 
+              title="Delete"
+              onClick={onDeleteOpen}
+            >
               <Trash2 className="h-4 w-4" />
             </Button>
           )}
@@ -781,6 +810,18 @@ export default function InvoiceDetailPage() {
         confirmText="Cancel Invoice"
         variant="destructive"
         isLoading={cancelMutation.isPending}
+      />
+
+      {/* Delete Invoice Dialog */}
+      <ConfirmDialog
+        isOpen={isDeleteOpen}
+        onClose={onDeleteClose}
+        onConfirm={() => deleteMutation.mutate()}
+        title="Delete Invoice"
+        message={`Are you sure you want to delete invoice ${invoice.invoiceNumber}? This action cannot be undone and will permanently remove the invoice and all its line items.`}
+        confirmText="Delete Invoice"
+        variant="destructive"
+        isLoading={deleteMutation.isPending}
       />
     </Box>
   );

@@ -349,10 +349,18 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            
-            {/* Catch-all route - redirects based on role */}
             <Route
-              path="*"
+              path="/portal/user-details"
+              element={
+                <ProtectedRoute>
+                  <PortalLayout>
+                    <UserDetailsPage />
+                  </PortalLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+                path="*"
               element={
                 <ProtectedRoute>
                   <RoleBasedRedirect />

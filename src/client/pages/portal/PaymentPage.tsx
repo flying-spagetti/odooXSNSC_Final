@@ -11,12 +11,14 @@ import {
   useToast,
   Progress,
   Spinner,
+  Input,
 } from '@chakra-ui/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft } from 'lucide-react';
 import { useCheckoutStore } from '@/store/checkoutStore';
 import { useCartStore } from '@/store/cartStore';
-import { paymentApi } from '@/lib/api';
+import { useAuthStore } from '@/store/authStore';
+import { paymentApi, discountApi } from '@/lib/api';
 import { useMutation } from '@tanstack/react-query';
 
 declare global {
@@ -28,10 +30,13 @@ declare global {
 export default function PaymentPage() {
   const navigate = useNavigate();
   const toast = useToast();
-  const { subscriptionId, setStep } = useCheckoutStore();
-  const { getTotalPrice, clearCart } = useCartStore();
+  const { user } = useAuthStore();
+  const { subscriptionId, setStep, appliedDiscount, setAppliedDiscount } = useCheckoutStore();
+  const { getTotalPrice, clearCart, items } = useCartStore();
   const [loading, setLoading] = useState(false);
   const [razorpayLoaded, setRazorpayLoaded] = useState(false);
+  const [discountCode, setDiscountCode] = useState('');
+  const [discountError, setDiscountError] = useState<string | null>(null);
 
   // Load Razorpay script
   useEffect(() => {
@@ -99,6 +104,76 @@ export default function PaymentPage() {
     },
   });
 
+  // Validate discount code
+  const validateDiscountMutation = useMutation({
+    mutationFn: (code: string) => {
+      const cartItems = items.map((item) => ({
+        variantId: item.variantId,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+      }));
+      return discountApi.validateCode({
+        code,
+        cartItems,
+        userId: user?.id,
+      });
+    },
+    onSuccess: (response) => {
+      if (response.data.valid && response.data.discount && response.data.discountAmount !== undefined) {
+        setAppliedDiscount({
+          discount: response.data.discount,
+          discountAmount: response.data.discountAmount,
+        });
+        setDiscountError(null);
+        toast({
+          title: 'Discount applied',
+          description: `You have successfully applied ${response.data.discount.name}`,
+          status: 'success',
+          duration: 3000,
+        });
+      } else {
+        setAppliedDiscount(null);
+        setDiscountError(response.data.message || 'Invalid discount code');
+        toast({
+          title: 'Invalid discount code',
+          description: response.data.message || 'The discount code you entered is not valid',
+          status: 'error',
+          duration: 3000,
+        });
+      }
+    },
+    onError: (error: any) => {
+      setAppliedDiscount(null);
+      const errorMessage = error.response?.data?.message || 'Failed to validate discount code';
+      setDiscountError(errorMessage);
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        status: 'error',
+        duration: 3000,
+      });
+    },
+  });
+
+  const handleApplyDiscount = () => {
+    if (!discountCode.trim()) {
+      toast({
+        title: 'Please enter a discount code',
+        status: 'warning',
+        duration: 3000,
+      });
+      return;
+    }
+
+    validateDiscountMutation.mutate(discountCode.trim().toUpperCase());
+  };
+
+  const handleRemoveDiscount = () => {
+    setAppliedDiscount(null);
+    setDiscountCode('');
+    setDiscountError(null);
+  };
+
   const handlePayment = async () => {
     if (!subscriptionId) {
       toast({
@@ -125,9 +200,11 @@ export default function PaymentPage() {
     try {
       // Calculate total
       const subtotal = getTotalPrice();
+      const discountAmount = appliedDiscount?.discountAmount || 0;
+      const afterDiscount = subtotal - discountAmount;
       const taxRate = 15;
-      const taxAmount = subtotal * (taxRate / 100);
-      const total = subtotal + taxAmount;
+      const taxAmount = afterDiscount * (taxRate / 100);
+      const total = afterDiscount + taxAmount;
 
       // Create Razorpay order
       const orderResponse = await createOrderMutation.mutateAsync(total);
@@ -241,9 +318,11 @@ export default function PaymentPage() {
 
   // Calculate totals
   const subtotal = getTotalPrice();
+  const discountAmount = appliedDiscount?.discountAmount || 0;
+  const afterDiscount = subtotal - discountAmount;
   const taxRate = 15;
-  const taxAmount = subtotal * (taxRate / 100);
-  const total = subtotal + taxAmount;
+  const taxAmount = afterDiscount * (taxRate / 100);
+  const total = afterDiscount + taxAmount;
 
   if (!subscriptionId) {
     return (
@@ -296,6 +375,50 @@ export default function PaymentPage() {
                   accordingly page should be implemented.
                 </Text>
 
+                {/* Discount Code Section */}
+                <Box pt={4} borderTop="1px solid" borderColor="gray.200">
+                  <VStack align="stretch" spacing={3}>
+                    <Text fontWeight="semibold">Discount Code</Text>
+                    <HStack spacing={2}>
+                      <Input
+                        placeholder="Enter discount code"
+                        value={discountCode}
+                        onChange={(e) => {
+                          setDiscountCode(e.target.value);
+                          setDiscountError(null);
+                        }}
+                        isDisabled={!!appliedDiscount}
+                        isInvalid={!!discountError}
+                        flex={1}
+                      />
+                      {appliedDiscount ? (
+                        <Button size="sm" colorScheme="red" variant="ghost" onClick={handleRemoveDiscount}>
+                          Remove
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          colorScheme="blue"
+                          onClick={handleApplyDiscount}
+                          isLoading={validateDiscountMutation.isPending}
+                        >
+                          Apply
+                        </Button>
+                      )}
+                    </HStack>
+                    {appliedDiscount && (
+                      <Text fontSize="sm" color="green.600">
+                        ✓ {appliedDiscount.discount.name} applied
+                      </Text>
+                    )}
+                    {discountError && !appliedDiscount && (
+                      <Text fontSize="sm" color="red.600">
+                        {discountError}
+                      </Text>
+                    )}
+                  </VStack>
+                </Box>
+
                 {!razorpayLoaded && (
                   <Box textAlign="center" py={8}>
                     <Spinner size="lg" />
@@ -335,6 +458,14 @@ export default function PaymentPage() {
                   <Text>Subtotal</Text>
                   <Text fontWeight="semibold">₹{subtotal.toFixed(2)}</Text>
                 </Flex>
+                {appliedDiscount && (
+                  <Flex justify="space-between">
+                    <Text color="green.600">Discount ({appliedDiscount.discount.name})</Text>
+                    <Text color="green.600" fontWeight="semibold">
+                      -₹{discountAmount.toFixed(2)}
+                    </Text>
+                  </Flex>
+                )}
                 <Flex justify="space-between">
                   <Text>Taxes ({taxRate}%)</Text>
                   <Text>₹{taxAmount.toFixed(2)}</Text>

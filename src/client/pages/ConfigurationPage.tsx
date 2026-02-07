@@ -64,9 +64,16 @@ export default function ConfigurationPage() {
   // ============ Discount Management ============
   const { isOpen: isDiscountOpen, onOpen: onDiscountOpen, onClose: onDiscountClose } = useDisclosure();
   const [discountName, setDiscountName] = useState('');
+  const [discountCode, setDiscountCode] = useState('');
   const [discountType, setDiscountType] = useState<'PERCENTAGE' | 'FIXED'>('PERCENTAGE');
   const [discountValue, setDiscountValue] = useState('');
   const [discountDesc, setDiscountDesc] = useState('');
+  const [discountStartDate, setDiscountStartDate] = useState('');
+  const [discountEndDate, setDiscountEndDate] = useState('');
+  const [discountMaxUses, setDiscountMaxUses] = useState('');
+  const [discountMaxUsesPerUser, setDiscountMaxUsesPerUser] = useState('');
+  const [discountMinPurchase, setDiscountMinPurchase] = useState('');
+  const [discountApplicableProducts, setDiscountApplicableProducts] = useState<string[]>([]);
 
   const { data: discountsData, isLoading: discountsLoading } = useQuery({
     queryKey: ['discounts'],
@@ -74,16 +81,35 @@ export default function ConfigurationPage() {
   });
 
   const createDiscountMutation = useMutation({
-    mutationFn: (data: { name: string; type: 'PERCENTAGE' | 'FIXED'; value: number; description?: string }) =>
+    mutationFn: (data: {
+      name: string;
+      code?: string;
+      type: 'PERCENTAGE' | 'FIXED';
+      value: number;
+      description?: string;
+      startDate?: string;
+      endDate?: string;
+      maxUses?: number;
+      maxUsesPerUser?: number;
+      minPurchaseAmount?: number;
+      applicableProductIds?: string[];
+    }) =>
       discountApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['discounts'] });
       toast({ title: 'Discount created', status: 'success', duration: 3000 });
       onDiscountClose();
       setDiscountName('');
+      setDiscountCode('');
       setDiscountType('PERCENTAGE');
       setDiscountValue('');
       setDiscountDesc('');
+      setDiscountStartDate('');
+      setDiscountEndDate('');
+      setDiscountMaxUses('');
+      setDiscountMaxUsesPerUser('');
+      setDiscountMinPurchase('');
+      setDiscountApplicableProducts([]);
     },
     onError: (error: any) => {
       toast({ title: 'Error', description: error.response?.data?.message || 'Failed', status: 'error', duration: 5000 });
@@ -233,6 +259,11 @@ export default function ConfigurationPage() {
   const discountColumns: Column<Discount>[] = [
     { header: 'Name', accessor: 'name', cell: (v) => <span className="font-medium">{v}</span> },
     {
+      header: 'Code',
+      accessor: 'code',
+      cell: (v) => (v ? <Badge variant="outline" className="font-mono">{v}</Badge> : <span className="text-muted-foreground">-</span>),
+    },
+    {
       header: 'Type',
       accessor: 'type',
       cell: (v) => <Badge variant="outline">{v}</Badge>,
@@ -241,8 +272,18 @@ export default function ConfigurationPage() {
       header: 'Value',
       accessor: (row) => row,
       cell: (_v, row) => (
-        <span>{row.type === 'PERCENTAGE' ? `${parseFloat(row.value).toFixed(0)}%` : `$${parseFloat(row.value).toFixed(2)}`}</span>
+        <span>{row.type === 'PERCENTAGE' ? `${parseFloat(row.value).toFixed(0)}%` : `₹${parseFloat(row.value).toFixed(2)}`}</span>
       ),
+    },
+    {
+      header: 'Validity',
+      accessor: (row) => row,
+      cell: (_v, row) => {
+        if (!row.startDate && !row.endDate) return <span className="text-muted-foreground">Always</span>;
+        const start = row.startDate ? new Date(row.startDate).toLocaleDateString() : 'Always';
+        const end = row.endDate ? new Date(row.endDate).toLocaleDateString() : 'Always';
+        return <span className="text-sm">{start} - {end}</span>;
+      },
     },
     { header: 'Description', accessor: 'description', cell: (v) => <span className="text-sm text-muted-foreground">{v || '-'}</span> },
     {
@@ -437,28 +478,41 @@ export default function ConfigurationPage() {
         isOpen={isDiscountOpen}
         onClose={onDiscountClose}
         title="Add Discount"
+        size="xl"
         onSubmit={() => {
           if (!discountName || !discountValue) return;
           createDiscountMutation.mutate({
             name: discountName,
+            code: discountCode || undefined,
             type: discountType,
             value: parseFloat(discountValue),
             description: discountDesc || undefined,
+            startDate: discountStartDate || undefined,
+            endDate: discountEndDate || undefined,
+            maxUses: discountMaxUses ? parseInt(discountMaxUses) : undefined,
+            maxUsesPerUser: discountMaxUsesPerUser ? parseInt(discountMaxUsesPerUser) : undefined,
+            minPurchaseAmount: discountMinPurchase ? parseFloat(discountMinPurchase) : undefined,
+            applicableProductIds: discountApplicableProducts.length > 0 ? discountApplicableProducts : undefined,
           });
         }}
         submitText="Create"
         isLoading={createDiscountMutation.isPending}
       >
-        <VStack spacing={4} align="stretch">
+        <VStack spacing={4} align="stretch" maxH="70vh" overflowY="auto">
           <div>
             <Label htmlFor="discountName">Name *</Label>
             <Input id="discountName" value={discountName} onChange={(e) => setDiscountName(e.target.value)} placeholder="e.g. 10% Off" required />
           </div>
           <div>
+            <Label htmlFor="discountCode">Coupon Code</Label>
+            <Input id="discountCode" value={discountCode} onChange={(e) => setDiscountCode(e.target.value.toUpperCase())} placeholder="e.g. SAVE10 (optional)" />
+            <p className="text-xs text-muted-foreground mt-1">Leave empty if discount is not applied via coupon</p>
+          </div>
+          <div>
             <Label htmlFor="discountType">Type *</Label>
             <select id="discountType" className="w-full mt-1 px-3 py-2 border rounded-md" value={discountType} onChange={(e) => setDiscountType(e.target.value as any)}>
               <option value="PERCENTAGE">Percentage (%)</option>
-              <option value="FIXED">Fixed ($)</option>
+              <option value="FIXED">Fixed (₹)</option>
             </select>
           </div>
           <div>
@@ -468,6 +522,52 @@ export default function ConfigurationPage() {
           <div>
             <Label htmlFor="discountDesc">Description</Label>
             <Input id="discountDesc" value={discountDesc} onChange={(e) => setDiscountDesc(e.target.value)} placeholder="Optional description" />
+          </div>
+          <SimpleGrid columns={2} spacing={4}>
+            <div>
+              <Label htmlFor="discountStartDate">Start Date</Label>
+              <Input id="discountStartDate" type="datetime-local" value={discountStartDate} onChange={(e) => setDiscountStartDate(e.target.value)} />
+            </div>
+            <div>
+              <Label htmlFor="discountEndDate">End Date</Label>
+              <Input id="discountEndDate" type="datetime-local" value={discountEndDate} onChange={(e) => setDiscountEndDate(e.target.value)} />
+            </div>
+          </SimpleGrid>
+          <SimpleGrid columns={2} spacing={4}>
+            <div>
+              <Label htmlFor="discountMaxUses">Max Total Uses</Label>
+              <Input id="discountMaxUses" type="number" min="1" value={discountMaxUses} onChange={(e) => setDiscountMaxUses(e.target.value)} placeholder="Unlimited if empty" />
+            </div>
+            <div>
+              <Label htmlFor="discountMaxUsesPerUser">Max Uses Per User</Label>
+              <Input id="discountMaxUsesPerUser" type="number" min="1" value={discountMaxUsesPerUser} onChange={(e) => setDiscountMaxUsesPerUser(e.target.value)} placeholder="Unlimited if empty" />
+            </div>
+          </SimpleGrid>
+          <div>
+            <Label htmlFor="discountMinPurchase">Minimum Purchase Amount (₹)</Label>
+            <Input id="discountMinPurchase" type="number" step="0.01" min="0" value={discountMinPurchase} onChange={(e) => setDiscountMinPurchase(e.target.value)} placeholder="No minimum if empty" />
+          </div>
+          <div>
+            <Label htmlFor="discountProducts">Applicable Products</Label>
+            <select
+              id="discountProducts"
+              className="w-full mt-1 px-3 py-2 border rounded-md"
+              multiple
+              size={5}
+              value={discountApplicableProducts}
+              onChange={(e) => {
+                const selected = Array.from(e.target.selectedOptions, (option) => option.value);
+                setDiscountApplicableProducts(selected);
+              }}
+            >
+              <option value="">All Products (if none selected)</option>
+              {productsItems.map((product: any) => (
+                <option key={product.id} value={product.id}>
+                  {product.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-muted-foreground mt-1">Hold Ctrl/Cmd to select multiple. Leave empty for all products.</p>
           </div>
         </VStack>
       </FormDialog>

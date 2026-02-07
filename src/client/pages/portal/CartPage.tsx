@@ -39,15 +39,9 @@ export default function CartPage() {
   const toast = useToast();
   const { user } = useAuthStore();
   const { items, updateQuantity, removeItem, clearCart, getTotalPrice } = useCartStore();
-  const { setSubscriptionId, setStep } = useCheckoutStore();
+  const { setSubscriptionId, setStep, appliedDiscount, setAppliedDiscount } = useCheckoutStore();
   const [discountCode, setDiscountCode] = useState('');
-  const [appliedDiscount, setAppliedDiscount] = useState<any>(null);
-
-  // Fetch discounts for code lookup
-  const { data: discountsData } = useQuery({
-    queryKey: ['discounts'],
-    queryFn: () => discountApi.list({ limit: 100 }),
-  });
+  const [discountError, setDiscountError] = useState<string | null>(null);
 
   const createSubscriptionMutation = useMutation({
     mutationFn: async (cartItems: typeof items) => {
@@ -78,7 +72,7 @@ export default function CartPage() {
             variantId: item.variantId,
             quantity: item.quantity,
             unitPrice: item.unitPrice,
-            discountId: appliedDiscount?.id,
+            discountId: appliedDiscount?.discount?.id,
           })
         )
       );
@@ -113,6 +107,56 @@ export default function CartPage() {
     });
   };
 
+  const validateDiscountMutation = useMutation({
+    mutationFn: (code: string) => {
+      const cartItems = items.map((item) => ({
+        variantId: item.variantId,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+      }));
+      return discountApi.validateCode({
+        code,
+        cartItems,
+        userId: user?.id,
+      });
+    },
+    onSuccess: (response) => {
+      if (response.data.valid && response.data.discount && response.data.discountAmount !== undefined) {
+        setAppliedDiscount({
+          discount: response.data.discount,
+          discountAmount: response.data.discountAmount,
+        });
+        setDiscountError(null);
+        toast({
+          title: 'Discount applied',
+          description: `You have successfully applied ${response.data.discount.name}`,
+          status: 'success',
+          duration: 3000,
+        });
+      } else {
+        setAppliedDiscount(null);
+        setDiscountError(response.data.message || 'Invalid discount code');
+        toast({
+          title: 'Invalid discount code',
+          description: response.data.message || 'The discount code you entered is not valid',
+          status: 'error',
+          duration: 3000,
+        });
+      }
+    },
+    onError: (error: any) => {
+      setAppliedDiscount(null);
+      const errorMessage = error.response?.data?.message || 'Failed to validate discount code';
+      setDiscountError(errorMessage);
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        status: 'error',
+        duration: 3000,
+      });
+    },
+  });
+
   const handleApplyDiscount = () => {
     if (!discountCode.trim()) {
       toast({
@@ -123,27 +167,13 @@ export default function CartPage() {
       return;
     }
 
-    // Find discount by name (assuming discount code is the name)
-    const discount = discountsData?.data.items.find(
-      (d) => d.name.toLowerCase() === discountCode.toLowerCase() && d.isActive
-    );
+    validateDiscountMutation.mutate(discountCode.trim().toUpperCase());
+  };
 
-    if (discount) {
-      setAppliedDiscount(discount);
-      toast({
-        title: 'Discount applied',
-        description: `You have successfully applied ${discount.name}`,
-        status: 'success',
-        duration: 3000,
-      });
-    } else {
-      toast({
-        title: 'Invalid discount code',
-        description: 'The discount code you entered is not valid',
-        status: 'error',
-        duration: 3000,
-      });
-    }
+  const handleRemoveDiscount = () => {
+    setAppliedDiscount(null);
+    setDiscountCode('');
+    setDiscountError(null);
   };
 
   const handleCheckout = () => {
@@ -179,11 +209,7 @@ export default function CartPage() {
 
   // Calculate totals
   const subtotal = getTotalPrice();
-  const discountAmount = appliedDiscount
-    ? appliedDiscount.type === 'PERCENTAGE'
-      ? subtotal * (parseFloat(appliedDiscount.value) / 100)
-      : parseFloat(appliedDiscount.value)
-    : 0;
+  const discountAmount = appliedDiscount?.discountAmount || 0;
   const afterDiscount = subtotal - discountAmount;
   // Assuming 15% tax for now (should come from tax rates)
   const taxRate = 15;
@@ -322,17 +348,33 @@ export default function CartPage() {
                     <Input
                       placeholder="Enter discount code"
                       value={discountCode}
-                      onChange={(e) => setDiscountCode(e.target.value)}
+                      onChange={(e) => {
+                        setDiscountCode(e.target.value);
+                        setDiscountError(null);
+                      }}
+                      isDisabled={!!appliedDiscount}
+                      isInvalid={!!discountError}
                     />
                     <InputRightElement width="80px">
-                      <Button size="sm" colorScheme="blue" onClick={handleApplyDiscount}>
-                        Apply
-                      </Button>
+                      {appliedDiscount ? (
+                        <Button size="sm" colorScheme="red" variant="ghost" onClick={handleRemoveDiscount}>
+                          Remove
+                        </Button>
+                      ) : (
+                        <Button size="sm" colorScheme="blue" onClick={handleApplyDiscount} isLoading={validateDiscountMutation.isPending}>
+                          Apply
+                        </Button>
+                      )}
                     </InputRightElement>
                   </InputGroup>
                   {appliedDiscount && (
                     <Text fontSize="sm" color="green.600">
-                      You have successfully applied {appliedDiscount.name}
+                      ✓ {appliedDiscount.discount.name} applied
+                    </Text>
+                  )}
+                  {discountError && !appliedDiscount && (
+                    <Text fontSize="sm" color="red.600">
+                      {discountError}
                     </Text>
                   )}
                 </VStack>
@@ -370,7 +412,7 @@ export default function CartPage() {
                 </Flex>
                 {appliedDiscount && (
                   <Flex justify="space-between">
-                    <Text color="green.600">Discount ({appliedDiscount.name})</Text>
+                    <Text color="green.600">Discount ({appliedDiscount.discount.name})</Text>
                     <Text color="green.600" fontWeight="semibold">
                       -₹{discountAmount.toFixed(2)}
                     </Text>

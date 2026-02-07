@@ -287,6 +287,61 @@ export class InvoiceService {
   }
 
   /**
+   * Delete invoice (only allowed for DRAFT or CONFIRMED invoices with no payments)
+   */
+  async delete(invoiceId: string, actorUserId: string) {
+    const invoice = await this.getById(invoiceId);
+
+    // Only allow deletion of DRAFT or CONFIRMED invoices
+    if (invoice.status !== 'DRAFT' && invoice.status !== 'CONFIRMED') {
+      throw new BusinessRuleError(
+        `Cannot delete invoice with status ${invoice.status}. Only DRAFT or CONFIRMED invoices can be deleted.`
+      );
+    }
+
+    // Check if invoice has payments
+    const paymentCount = await this.prisma.payment.count({
+      where: { invoiceId },
+    });
+
+    if (paymentCount > 0) {
+      throw new BusinessRuleError(
+        'Cannot delete invoice with existing payments. Cancel the invoice instead.'
+      );
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      // Delete invoice lines first (cascade should handle this, but being explicit)
+      await tx.invoiceLine.deleteMany({
+        where: { invoiceId },
+      });
+
+      // Delete the invoice
+      await tx.invoice.delete({
+        where: { id: invoiceId },
+      });
+
+      // Log the deletion
+      await this.auditService.log(
+        {
+          userId: actorUserId,
+          entityType: 'INVOICE',
+          entityId: invoiceId,
+          action: 'DELETED',
+          oldValue: {
+            invoiceNumber: invoice.invoiceNumber,
+            status: invoice.status,
+            total: invoice.total,
+          },
+        },
+        tx
+      );
+
+      return { success: true };
+    });
+  }
+
+  /**
    * Internal method to transition invoice status
    */
   private async transition(invoiceId: string, toStatus: InvoiceStatus, actorUserId: string) {

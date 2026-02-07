@@ -161,6 +161,19 @@ const invoicesRoutes: FastifyPluginAsync = async (fastify) => {
       return { payments };
     }
   );
+
+  // Delete invoice
+  fastify.delete(
+    '/:id',
+    {
+      onRequest: [fastify.authenticate, fastify.authorize('invoices:delete')],
+    },
+    async (request, reply) => {
+      const params = z.object({ id: z.string() }).parse(request.params);
+      const result = await invoiceService.delete(params.id, request.user!.userId);
+      return result;
+    }
+  );
 };
 
 export default invoicesRoutes;

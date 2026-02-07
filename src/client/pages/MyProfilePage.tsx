@@ -1,20 +1,73 @@
-import { useState } from 'react';
+
 import { useNavigate } from 'react-router-dom';
-import { Box, Flex, SimpleGrid, VStack } from '@chakra-ui/react';
-import { User, Shield, Mail, Calendar, LogOut } from 'lucide-react';
+import { Box, Flex, SimpleGrid, VStack, Table, Thead, Tbody, Tr, Th, Td, Text, HStack, Spinner } from '@chakra-ui/react';
+import { User, Shield, Mail, Calendar, LogOut, FileText, Package, Download } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/store/authStore';
+import { subscriptionApi, invoiceApi } from '@/lib/api';
+import { useQuery } from '@tanstack/react-query';
 
 export default function MyProfilePage() {
   const { user, clearAuth } = useAuthStore();
   const navigate = useNavigate();
 
+  // Fetch user's subscriptions (orders)
+  const { data: subscriptionsData, isLoading: subscriptionsLoading } = useQuery({
+    queryKey: ['subscriptions', user?.id],
+    queryFn: () => subscriptionApi.list({ userId: user?.id, limit: 10 }),
+    enabled: !!user?.id,
+  });
+
+  // Fetch user's invoices
+  const { data: invoicesData, isLoading: invoicesLoading } = useQuery({
+    queryKey: ['invoices', user?.id],
+    queryFn: () => invoiceApi.list({ limit: 10 }),
+    enabled: !!user?.id,
+  });
+
   const handleLogout = () => {
     clearAuth();
     navigate('/login');
   };
+
+  const handleOrderClick = (subscriptionId: string) => {
+    navigate(`/portal/orders/${subscriptionId}`);
+  };
+
+  const handleInvoiceClick = (invoiceId: string) => {
+    navigate(`/invoices/${invoiceId}`);
+  };
+
+  const handleDownloadOrder = (subscriptionId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    window.open(`/api/v1/subscriptions/${subscriptionId}/pdf`, '_blank');
+  };
+
+  // Calculate total for a subscription
+  const calculateTotal = (subscription: any) => {
+    if (!subscription.lines || subscription.lines.length === 0) return 0;
+    let total = 0;
+    subscription.lines.forEach((line: any) => {
+      const lineSubtotal = line.quantity * parseFloat(line.unitPrice);
+      let discount = 0;
+      if (line.discount) {
+        if (line.discount.type === 'PERCENTAGE') {
+          discount = lineSubtotal * (parseFloat(line.discount.value) / 100);
+        } else {
+          discount = parseFloat(line.discount.value);
+        }
+      }
+      const afterDiscount = lineSubtotal - discount;
+      const tax = line.taxRate ? afterDiscount * (parseFloat(line.taxRate.rate) / 100) : 0;
+      total += afterDiscount + tax;
+    });
+    return total;
+  };
+
+  const subscriptions = subscriptionsData?.data.items || [];
+  const invoices = invoicesData?.data.items || [];
 
   if (!user) {
     return (
@@ -148,6 +201,186 @@ export default function MyProfilePage() {
           </CardContent>
         </Card>
       </SimpleGrid>
+
+      {/* Previous Orders */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Package className="h-5 w-5" />
+            Previous Orders
+          </CardTitle>
+          <CardDescription>Your recent subscription orders</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {subscriptionsLoading ? (
+            <Flex justify="center" py={8}>
+              <Spinner />
+            </Flex>
+          ) : subscriptions.length === 0 ? (
+            <Box textAlign="center" py={8}>
+              <Text color="gray.600">No orders found</Text>
+            </Box>
+          ) : (
+            <Table variant="simple">
+              <Thead>
+                <Tr>
+                  <Th>Order Number</Th>
+                  <Th>Date</Th>
+                  <Th>Status</Th>
+                  <Th>Total</Th>
+                  <Th>Actions</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {subscriptions.map((subscription: any) => {
+                  const total = calculateTotal(subscription);
+                  const orderDate = subscription.orderDate
+                    ? new Date(subscription.orderDate).toLocaleDateString()
+                    : subscription.createdAt
+                    ? new Date(subscription.createdAt).toLocaleDateString()
+                    : 'N/A';
+
+                  return (
+                    <Tr
+                      key={subscription.id}
+                      cursor="pointer"
+                      _hover={{ bg: 'gray.50' }}
+                      onClick={() => handleOrderClick(subscription.id)}
+                    >
+                      <Td>
+                        <Text fontWeight="medium">{subscription.subscriptionNumber}</Text>
+                      </Td>
+                      <Td>{orderDate}</Td>
+                      <Td>
+                        <Badge
+                          className={
+                            subscription.status === 'ACTIVE'
+                              ? 'bg-green-100 text-green-800'
+                              : subscription.status === 'CONFIRMED'
+                              ? 'bg-blue-100 text-blue-800'
+                              : subscription.status === 'CLOSED'
+                              ? 'bg-gray-100 text-gray-800'
+                              : 'bg-yellow-100 text-yellow-800'
+                          }
+                        >
+                          {subscription.status}
+                        </Badge>
+                      </Td>
+                      <Td>₹{total.toFixed(2)}</Td>
+                      <Td>
+                        <HStack spacing={2}>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={(e) => handleDownloadOrder(subscription.id, e)}
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleOrderClick(subscription.id)}
+                          >
+                            View
+                          </Button>
+                        </HStack>
+                      </Td>
+                    </Tr>
+                  );
+                })}
+              </Tbody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Previous Invoices */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Previous Invoices
+          </CardTitle>
+          <CardDescription>Your recent invoices</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {invoicesLoading ? (
+            <Flex justify="center" py={8}>
+              <Spinner />
+            </Flex>
+          ) : invoices.length === 0 ? (
+            <Box textAlign="center" py={8}>
+              <Text color="gray.600">No invoices found</Text>
+            </Box>
+          ) : (
+            <Table variant="simple">
+              <Thead>
+                <Tr>
+                  <Th>Invoice Number</Th>
+                  <Th>Issue Date</Th>
+                  <Th>Due Date</Th>
+                  <Th>Status</Th>
+                  <Th>Total</Th>
+                  <Th>Paid</Th>
+                  <Th>Actions</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {invoices.map((invoice: any) => {
+                  const total = parseFloat(invoice.total);
+                  const paid = parseFloat(invoice.paidAmount);
+                  const outstanding = total - paid;
+
+                  return (
+                    <Tr
+                      key={invoice.id}
+                      cursor="pointer"
+                      _hover={{ bg: 'gray.50' }}
+                      onClick={() => handleInvoiceClick(invoice.id)}
+                    >
+                      <Td>
+                        <Text fontWeight="medium">{invoice.invoiceNumber}</Text>
+                      </Td>
+                      <Td>{new Date(invoice.issueDate).toLocaleDateString()}</Td>
+                      <Td>{new Date(invoice.dueDate).toLocaleDateString()}</Td>
+                      <Td>
+                        <Badge
+                          className={
+                            invoice.status === 'PAID'
+                              ? 'bg-green-100 text-green-800'
+                              : invoice.status === 'CONFIRMED'
+                              ? 'bg-blue-100 text-blue-800'
+                              : invoice.status === 'CANCELED'
+                              ? 'bg-red-100 text-red-800'
+                              : 'bg-yellow-100 text-yellow-800'
+                          }
+                        >
+                          {invoice.status}
+                        </Badge>
+                      </Td>
+                      <Td>₹{total.toFixed(2)}</Td>
+                      <Td>
+                        <Text color={outstanding > 0 ? 'red.600' : 'green.600'}>
+                          ₹{paid.toFixed(2)}
+                        </Text>
+                      </Td>
+                      <Td>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleInvoiceClick(invoice.id)}
+                        >
+                          View
+                        </Button>
+                      </Td>
+                    </Tr>
+                  );
+                })}
+              </Tbody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Actions */}
       <Card>

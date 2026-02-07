@@ -162,7 +162,10 @@ const productsRoutes: FastifyPluginAsync = async (fastify) => {
         }
 
         const data = CreateVariantSchema.parse(variantData);
-        const variant = await productService.createVariant(data);
+        const variant = await productService.createVariant({
+          ...data,
+          productId: params.id,
+        });
         return { variant };
       } else {
         const data = CreateVariantSchema.parse(request.body);

@@ -152,6 +152,7 @@ export interface Invoice {
   discountAmount: string;
   total: string;
   paidAmount: string;
+  notes?: string;
   createdAt: string;
   subscription?: Subscription;
   lines?: InvoiceLine[];
@@ -182,10 +183,17 @@ export interface TaxRate {
 export interface Discount {
   id: string;
   name: string;
+  code?: string;
   type: 'PERCENTAGE' | 'FIXED';
   value: string;
   description?: string;
   isActive: boolean;
+  startDate?: string;
+  endDate?: string;
+  maxUses?: number;
+  maxUsesPerUser?: number;
+  minPurchaseAmount?: string;
+  applicableProductIds?: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -381,6 +389,9 @@ export const invoiceApi = {
   restore: (id: string) =>
     api.post<{ invoice: Invoice }>(`/invoices/${id}/actions/restore`, {}),
   
+  delete: (id: string) =>
+    api.delete<{ success: boolean }>(`/invoices/${id}`),
+  
   recordPayment: (id: string, data: { amount: number; paymentMethod: string; reference?: string; notes?: string; paymentDate?: string }) =>
     api.post<{ payment: Payment }>(`/invoices/${id}/payments`, data),
   
@@ -494,14 +505,46 @@ export const discountApi = {
   get: (id: string) =>
     api.get<{ discount: Discount }>(`/discounts/${id}`),
   
-  create: (data: { name: string; type: 'PERCENTAGE' | 'FIXED'; value: number; description?: string }) =>
+  create: (data: {
+    name: string;
+    code?: string;
+    type: 'PERCENTAGE' | 'FIXED';
+    value: number;
+    description?: string;
+    startDate?: string;
+    endDate?: string;
+    maxUses?: number;
+    maxUsesPerUser?: number;
+    minPurchaseAmount?: number;
+    applicableProductIds?: string[];
+  }) =>
     api.post<{ discount: Discount }>('/discounts', data),
   
-  update: (id: string, data: { name?: string; value?: number; description?: string; isActive?: boolean }) =>
+  update: (id: string, data: {
+    name?: string;
+    code?: string;
+    type?: 'PERCENTAGE' | 'FIXED';
+    value?: number;
+    description?: string;
+    startDate?: string;
+    endDate?: string;
+    maxUses?: number;
+    maxUsesPerUser?: number;
+    minPurchaseAmount?: number;
+    applicableProductIds?: string[];
+    isActive?: boolean;
+  }) =>
     api.patch<{ discount: Discount }>(`/discounts/${id}`, data),
   
   delete: (id: string) =>
     api.delete(`/discounts/${id}`),
+  
+  validateCode: (data: {
+    code: string;
+    cartItems: Array<{ variantId: string; quantity: number; unitPrice: number }>;
+    userId?: string;
+  }) =>
+    api.post<{ valid: boolean; discount?: Discount; discountAmount?: number; message?: string }>('/discounts/validate', data),
 };
 
 // Payment APIs (Razorpay)

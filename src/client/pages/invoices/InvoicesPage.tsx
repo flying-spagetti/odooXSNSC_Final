@@ -8,6 +8,7 @@ import { DataTable, Column } from '@/components/DataTable';
 import { StatusBadge } from '@/components/StatusBadge';
 import { EmptyState } from '@/components/EmptyState';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@chakra-ui/react';
 
 export default function InvoicesPage() {
   const navigate = useNavigate();
@@ -110,6 +111,7 @@ export default function InvoicesPage() {
           <h1 className="text-3xl font-bold">Invoices</h1>
           <p className="text-muted-foreground">Manage customer invoices and payments</p>
         </div>
+        <button className=" text-black bg-gray-200 px-4 py-2 rounded-md" onClick={() => navigate('/portal/my-account')}>My Account</button>
       </Flex>
 
       <Flex gap={4} className="mb-4">
