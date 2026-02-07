@@ -1,31 +1,47 @@
 {
-  "name": "subs_manager",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
+  "name": "subs-manager-backend",
+  "version": "1.0.0",
+  "description": "Production-grade Subscription Management Platform Backend",
+  "main": "dist/index.js",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "prisma:studio": "prisma studio",
+    "seed": "tsx src/scripts/seed.ts",
+    "smoke": "tsx src/scripts/smoke.ts",
+    "lint": "eslint src --ext .ts",
+    "format": "prettier --write \"src/**/*.ts\""
   },
+  "keywords": ["subscription", "billing", "fastify", "prisma"],
+  "author": "Odoo Backend Team",
+  "license": "MIT",
   "dependencies": {
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "@fastify/cors": "^9.0.1",
+    "@fastify/jwt": "^8.0.0",
+    "@prisma/client": "^5.22.0",
+    "bcrypt": "^5.1.1",
+    "fastify": "^4.28.1",
+    "fastify-plugin": "^4.5.1",
+    "pino": "^9.4.0",
+    "pino-pretty": "^11.2.2",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.1",
-    "@types/node": "^24.10.1",
-    "@types/react": "^19.2.5",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^5.1.1",
-    "babel-plugin-react-compiler": "^1.0.0",
-    "eslint": "^9.39.1",
-    "eslint-plugin-react-hooks": "^7.0.1",
-    "eslint-plugin-react-refresh": "^0.4.24",
-    "globals": "^16.5.0",
-    "typescript": "~5.9.3",
-    "typescript-eslint": "^8.46.4",
-    "vite": "^7.2.4"
+    "@types/bcrypt": "^5.0.2",
+    "@types/node": "^22.5.0",
+    "@typescript-eslint/eslint-plugin": "^8.5.0",
+    "@typescript-eslint/parser": "^8.5.0",
+    "eslint": "^9.10.0",
+    "prettier": "^3.3.3",
+    "prisma": "^5.22.0",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.2"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   }
 }
