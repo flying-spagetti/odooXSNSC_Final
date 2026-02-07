@@ -20,20 +20,6 @@ export default function ForgotPassword() {
     setIsLoading(true);
 
     try {
-      // First check if email exists
-      const { data: checkData } = await authApi.checkEmail(email);
-      
-      if (!checkData.exists) {
-        toast({
-          title: 'Email not found',
-          description: 'No account exists with this email address',
-          status: 'error',
-          duration: 5000,
-        });
-        setIsLoading(false);
-        return;
-      }
-
       // Request password reset
       const { data } = await authApi.forgotPassword(email);
       
@@ -155,7 +141,7 @@ export default function ForgotPassword() {
                 required
               />
               <p className="text-xs text-muted-foreground">
-                We'll check if this email exists in our system
+                We'll send reset instructions if an account exists for this email
               </p>
             </div>
 
