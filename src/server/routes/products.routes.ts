@@ -39,6 +39,7 @@ const productsRoutes: FastifyPluginAsync = async (fastify) => {
         if (part.type === 'file') {
           imageUrl = await saveUploadedFile(part);
         } else {
+          // In v7, field name is accessed via 'fieldname' property
           const field = part as { fieldname: string; value: string };
           if (field.fieldname === 'name') {
             name = field.value;
@@ -100,7 +101,8 @@ const productsRoutes: FastifyPluginAsync = async (fastify) => {
       const params = z.object({ id: z.string() }).parse(request.params);
       
       // Check if multipart form data
-      if (request.isMultipart()) {
+      const contentType = request.headers['content-type'] || '';
+      if (contentType.includes('multipart/form-data')) {
         const parts = request.parts();
         const updateData: any = {};
         let imageUrl: string | undefined;
@@ -110,6 +112,7 @@ const productsRoutes: FastifyPluginAsync = async (fastify) => {
             imageUrl = await saveUploadedFile(part);
             updateData.imageUrl = imageUrl;
           } else {
+            // In v7, field name is accessed via 'fieldname' property
             const field = part as { fieldname: string; value: string };
             if (field.fieldname === 'name' || field.fieldname === 'description') {
               updateData[field.fieldname] = field.value;
@@ -138,7 +141,8 @@ const productsRoutes: FastifyPluginAsync = async (fastify) => {
       const params = z.object({ id: z.string() }).parse(request.params);
       
       // Check if multipart form data
-      if (request.isMultipart()) {
+      const contentType = request.headers['content-type'] || '';
+      if (contentType.includes('multipart/form-data')) {
         const parts = request.parts();
         const variantData: any = { productId: params.id };
         let imageUrl: string | undefined;
@@ -148,6 +152,7 @@ const productsRoutes: FastifyPluginAsync = async (fastify) => {
             imageUrl = await saveUploadedFile(part);
             variantData.imageUrl = imageUrl;
           } else {
+            // In v7, field name is accessed via 'fieldname' property
             const field = part as { fieldname: string; value: string };
             if (field.fieldname === 'name') variantData.name = field.value;
             else if (field.fieldname === 'sku') variantData.sku = field.value;

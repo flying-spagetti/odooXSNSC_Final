@@ -18,6 +18,7 @@ import {
 import { AuditService } from './audit.service';
 import { generateSubscriptionNumber } from '../utils/generators';
 import { calculateNextBillingDate } from '../domain/pricing';
+import { MoreHorizontal } from 'lucide-react';
 
 export interface CreateSubscriptionData {
   userId: string;
@@ -49,6 +50,19 @@ export interface AddLineData {
   notes?: string;
 }
 
+
+interface MoreAddLineData extends AddLineData {
+  productId: "Product1",
+  variantId: string;
+  quantity: number;
+  unitPrice: number;
+  discountId?: string;
+  taxRateId?: string;
+  notes?: string;
+}
+
+
+
 export class SubscriptionService {
   private auditService: AuditService;
 
@@ -59,7 +73,9 @@ export class SubscriptionService {
   /**
    * Create a new subscription in DRAFT status
    */
-  async create(data: CreateSubscriptionData, actorUserId: string) {
+  async create(data: CreateSubscriptionData, actorUserId: string,)
+  
+  {
     // Verify plan exists
     const plan = await this.prisma.recurringPlan.findUnique({
       where: { id: data.planId },
@@ -107,7 +123,7 @@ export class SubscriptionService {
           action: 'CREATED',
           newValue: { status: subscription.status },
         },
-        tx
+        this.prisma
       );
 
       return subscription;
@@ -272,7 +288,7 @@ export class SubscriptionService {
         subscriptionId,
         subscription.status,
         'ACTIVE',
-        tx
+        this.prisma
       );
 
       return updated;
@@ -309,7 +325,7 @@ export class SubscriptionService {
         subscriptionId,
         subscription.status,
         'CLOSED',
-        tx
+        this.prisma
       );
 
       return updated;
@@ -362,7 +378,7 @@ export class SubscriptionService {
           action: 'UPDATED',
           newValue: data as any,
         },
-        tx
+        this.prisma
       );
 
       return updated;
@@ -398,7 +414,7 @@ export class SubscriptionService {
           action: 'DELETED',
           newValue: { subscriptionNumber: subscription.subscriptionNumber },
         },
-        tx
+        this.prisma
       );
 
       return true;
@@ -435,7 +451,7 @@ export class SubscriptionService {
         subscriptionId,
         subscription.status,
         'CLOSED',
-        tx
+        this.prisma
       );
 
       return updated;
@@ -443,7 +459,8 @@ export class SubscriptionService {
   }
 
   /**
-   * Renew a closed subscription → creates a new DRAFT subscription
+   * Renew a subscription → creates a new DRAFT subscription with same order lines
+   * Works from CONFIRMED, ACTIVE, or CLOSED states
    */
   async actionRenew(subscriptionId: string, actorUserId: string) {
     const subscription = await this.getById(subscriptionId, {
@@ -461,13 +478,38 @@ export class SubscriptionService {
       throw new BusinessRuleError('DRAFT subscriptions cannot be renewed');
     }
 
+    if (!['CONFIRMED', 'ACTIVE', 'CLOSED'].includes(subscription.status)) {
+      throw new BusinessRuleError('Subscription can only be renewed from CONFIRMED, ACTIVE, or CLOSED status');
+    }
+
     return this.prisma.$transaction(async (tx) => {
+      // Get plan details
+      const plan = await tx.recurringPlan.findUnique({
+        where: { id: subscription.planId },
+      });
+
+      if (!plan) {
+        throw new NotFoundError('RecurringPlan', subscription.planId);
+      }
+
+      // Get subscription lines
+      const lines = await tx.subscriptionLine.findMany({
+        where: { subscriptionId },
+        include: {
+          variant: true,
+          discount: true,
+          taxRate: true,
+        },
+      });
+
       // Compute dates for the renewed subscription
       const now = new Date();
+      // Use current date or subscription's expiration date as base for next billing
+      const baseDate = subscription.expirationDate ? new Date(subscription.expirationDate) : now;
       const nextBillingDate = calculateNextBillingDate(
-        now,
-        subscription.plan.billingPeriod,
-        subscription.plan.intervalCount
+        baseDate,
+        plan.billingPeriod,
+        plan.intervalCount
       );
 
       // Create new subscription based on old one
@@ -478,8 +520,8 @@ export class SubscriptionService {
           planId: subscription.planId,
           status: 'DRAFT',
           startDate: now,
-          orderDate: now,
-          nextBillingDate,
+          orderDate: now, // Order date is set to current date
+          nextBillingDate, // Next invoice date computed based on plan
           quotationTemplate: subscription.quotationTemplate,
           paymentTermDays: subscription.paymentTermDays,
           paymentMethod: subscription.paymentMethod,
@@ -489,8 +531,8 @@ export class SubscriptionService {
       });
 
       // Copy line items
-      if (subscription.lines && subscription.lines.length > 0) {
-        for (const line of subscription.lines) {
+      if (lines && lines.length > 0) {
+        for (const line of lines) {
           await tx.subscriptionLine.create({
             data: {
               subscriptionId: newSubscription.id,
@@ -539,9 +581,27 @@ export class SubscriptionService {
    * Get subscription by ID
    */
   async getById(subscriptionId: string, include?: Record<string, unknown>) {
+    const defaultInclude: any = {
+      plan: true,
+      user: { select: { id: true, email: true, name: true } },
+      salesperson: { select: { id: true, email: true, name: true } },
+      lines: {
+        include: {
+          variant: { include: { product: true } },
+          discount: true,
+          taxRate: true,
+        },
+      },
+      invoices: {
+        orderBy: { createdAt: 'desc' as const },
+      },
+    };
+
+    const finalInclude = include ? { ...defaultInclude, ...include } : defaultInclude;
+
     const subscription = await this.prisma.subscription.findUnique({
       where: { id: subscriptionId },
-      include,
+      include: finalInclude,
     });
 
     if (!subscription) {
@@ -627,3 +687,8 @@ export class SubscriptionService {
     });
   }
 }
+
+async function PrintMoreAddLineData(moreAddLineData: MoreAddLineData) {
+  console.log(moreAddLineData);
+}
+PrintMoreAddLineData()

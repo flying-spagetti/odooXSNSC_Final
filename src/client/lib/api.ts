@@ -373,6 +373,9 @@ export const invoiceApi = {
   cancel: (id: string) =>
     api.post<{ invoice: Invoice }>(`/invoices/${id}/actions/cancel`, {}),
   
+  restore: (id: string) =>
+    api.post<{ invoice: Invoice }>(`/invoices/${id}/actions/restore`, {}),
+  
   recordPayment: (id: string, data: { amount: number; paymentMethod: string; reference?: string; notes?: string; paymentDate?: string }) =>
     api.post<{ payment: Payment }>(`/invoices/${id}/payments`, data),
   

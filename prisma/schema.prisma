@@ -63,6 +63,8 @@ model User {
   email            String    @unique
   password         String
   name             String
+  phone            String?
+  address          String?
   role             Role      @default(PORTAL)
   isActive         Boolean   @default(true)
   resetToken       String?

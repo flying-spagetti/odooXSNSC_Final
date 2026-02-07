@@ -112,6 +112,19 @@ const invoicesRoutes: FastifyPluginAsync = async (fastify) => {
     }
   );
 
+  // Action: Restore (CANCELED -> DRAFT)
+  fastify.post(
+    '/:id/actions/restore',
+    {
+      onRequest: [fastify.authenticate, fastify.authorize('invoices:actions')],
+    },
+    async (request, reply) => {
+      const params = z.object({ id: z.string() }).parse(request.params);
+      const invoice = await invoiceService.actionRestore(params.id, request.user!.userId);
+      return { invoice };
+    }
+  );
+
   // Record payment
   fastify.post(
     '/:id/payments',

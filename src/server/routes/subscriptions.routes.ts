@@ -276,13 +276,28 @@ const subscriptionsRoutes: FastifyPluginAsync = async (fastify) => {
       const params = z.object({ id: z.string() }).parse(request.params);
       const query = z
         .object({
-          periodStart: z.string().datetime(),
+          periodStart: z.string(), // Accept date or datetime string
         })
         .parse(request.query);
 
+      // Convert to Date - handles both date strings (YYYY-MM-DD) and datetime strings
+      let periodStartDate: Date;
+      if (query.periodStart.includes('T') || query.periodStart.includes('Z')) {
+        // Already a datetime string
+        periodStartDate = new Date(query.periodStart);
+      } else {
+        // Date string (YYYY-MM-DD), convert to datetime at start of day UTC
+        periodStartDate = new Date(query.periodStart + 'T00:00:00.000Z');
+      }
+
+      // Validate the date is valid
+      if (isNaN(periodStartDate.getTime())) {
+        throw new Error('Invalid date format for periodStart');
+      }
+
       const invoice = await invoiceService.generateInvoiceForPeriod(
         params.id,
-        new Date(query.periodStart),
+        periodStartDate,
         request.user!.userId
       );
 

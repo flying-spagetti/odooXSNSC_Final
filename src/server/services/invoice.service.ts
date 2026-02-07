@@ -180,6 +180,13 @@ export class InvoiceService {
   }
 
   /**
+   * Restore cancelled invoice to draft
+   */
+  async actionRestore(invoiceId: string, actorUserId: string) {
+    return this.transition(invoiceId, 'DRAFT', actorUserId);
+  }
+
+  /**
    * Mark invoice as paid (internal, called by PaymentService)
    */
   async markPaid(invoiceId: string, actorUserId: string, tx?: PrismaClient) {

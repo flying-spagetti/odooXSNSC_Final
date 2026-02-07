@@ -9,9 +9,10 @@ export type InvoiceStatus = 'DRAFT' | 'CONFIRMED' | 'PAID' | 'CANCELED';
 /**
  * Subscription State Machine
  * DRAFT -> QUOTATION -> CONFIRMED -> ACTIVE -> CLOSED
+ * DRAFT -> CONFIRMED (direct confirmation)
  */
 export const SubscriptionTransitions: Record<SubscriptionStatus, SubscriptionStatus[]> = {
-  DRAFT: ['QUOTATION'],
+  DRAFT: ['QUOTATION', 'CONFIRMED'], // Can send quotation or directly confirm
   QUOTATION: ['CONFIRMED', 'DRAFT', 'CLOSED'],
   CONFIRMED: ['ACTIVE', 'CLOSED'],
   ACTIVE: ['CLOSED'],
@@ -21,13 +22,13 @@ export const SubscriptionTransitions: Record<SubscriptionStatus, SubscriptionSta
 /**
  * Invoice State Machine
  * DRAFT -> CONFIRMED -> PAID
- *       \-> CANCELED
+ *       \-> CANCELED -> DRAFT (restore)
  */
 export const InvoiceTransitions: Record<InvoiceStatus, InvoiceStatus[]> = {
   DRAFT: ['CONFIRMED', 'CANCELED'],
   CONFIRMED: ['PAID', 'CANCELED'],
   PAID: [], // Terminal state
-  CANCELED: [], // Terminal state
+  CANCELED: ['DRAFT'], // Can be restored to draft
 };
 
 export function canTransitionSubscription(
@@ -46,7 +47,7 @@ export function canTransitionInvoice(from: InvoiceStatus, to: InvoiceStatus): bo
  */
 export const SubscriptionActions = {
   QUOTE: { from: ['DRAFT'], to: 'QUOTATION' as SubscriptionStatus },
-  CONFIRM: { from: ['QUOTATION'], to: 'CONFIRMED' as SubscriptionStatus },
+  CONFIRM: { from: ['DRAFT', 'QUOTATION'], to: 'CONFIRMED' as SubscriptionStatus }, // Can confirm from DRAFT or QUOTATION
   ACTIVATE: { from: ['CONFIRMED'], to: 'ACTIVE' as SubscriptionStatus },
   CLOSE: { from: ['QUOTATION', 'CONFIRMED', 'ACTIVE'], to: 'CLOSED' as SubscriptionStatus },
 } as const;
@@ -54,5 +55,6 @@ export const SubscriptionActions = {
 export const InvoiceActions = {
   CONFIRM: { from: ['DRAFT'], to: 'CONFIRMED' as InvoiceStatus },
   CANCEL: { from: ['DRAFT', 'CONFIRMED'], to: 'CANCELED' as InvoiceStatus },
+  RESTORE: { from: ['CANCELED'], to: 'DRAFT' as InvoiceStatus },
   MARK_PAID: { from: ['CONFIRMED'], to: 'PAID' as InvoiceStatus },
 } as const;

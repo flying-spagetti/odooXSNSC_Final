@@ -27,6 +27,7 @@ import taxesRoutes from './routes/taxes.routes';
 import discountsRoutes from './routes/discounts.routes';
 import reportsRoutes from './routes/reports.routes';
 import templatesRoutes from './routes/templates.routes';
+import paymentsRoutes from './routes/payments.routes';
 
 async function buildServer() {
   const fastify = Fastify({

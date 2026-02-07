@@ -29,6 +29,7 @@ import {
   Printer,
   Check,
   FileText,
+  RefreshCw,
 } from 'lucide-react';
 import { invoiceApi } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -106,6 +107,24 @@ export default function InvoiceDetailPage() {
         title: 'Error',
         description:
           error.response?.data?.message || 'Failed to cancel invoice',
+        status: 'error',
+        duration: 5000,
+      });
+    },
+  });
+
+  const restoreMutation = useMutation({
+    mutationFn: () => invoiceApi.restore(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoice', id] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      toast({ title: 'Invoice restored to draft', status: 'success', duration: 3000 });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description:
+          error.response?.data?.message || 'Failed to restore invoice',
         status: 'error',
         duration: 5000,
       });
@@ -211,14 +230,14 @@ export default function InvoiceDetailPage() {
         gap={2}
       >
         <Flex gap={2} wrap="wrap" align="center">
-          {/* Delete icon (Draft only) */}
-          {invoice.status === 'DRAFT' && (
+          {/* Delete icon (Draft and Confirmed) */}
+          {(invoice.status === 'DRAFT' || invoice.status === 'CONFIRMED') && (
             <Button size="sm" variant="ghost" title="Delete">
               <Trash2 className="h-4 w-4" />
             </Button>
           )}
 
-          {/* Confirm & Cancel for DRAFT */}
+          {/* DRAFT state: Delete, Confirm, Cancel */}
           {invoice.status === 'DRAFT' && (
             <>
               <Button size="sm" onClick={onConfirmOpen}>
@@ -234,7 +253,7 @@ export default function InvoiceDetailPage() {
             </>
           )}
 
-          {/* Confirmed state: Confirm, Cancel, Subscription link, Preview + Send, Pay, Print */}
+          {/* CONFIRMED state: Delete, Confirm (disabled), Cancel, Subscription, Preview, Send, Pay, Print */}
           {invoice.status === 'CONFIRMED' && (
             <>
               <Button
@@ -273,10 +292,6 @@ export default function InvoiceDetailPage() {
                 <ArrowLeft className="h-4 w-4 mr-1 rotate-180" />{' '}
                 Preview
               </Button>
-
-              {/* Separator */}
-              <div className="w-px h-6 bg-gray-300 mx-1" />
-
               <Button
                 size="sm"
                 onClick={() => {
@@ -301,6 +316,17 @@ export default function InvoiceDetailPage() {
                 <Printer className="h-4 w-4 mr-1" /> Print
               </Button>
             </>
+          )}
+
+          {/* CANCELED state: Restore to draft */}
+          {invoice.status === 'CANCELED' && (
+            <Button
+              size="sm"
+              onClick={() => restoreMutation.mutate()}
+              disabled={restoreMutation.isPending}
+            >
+              <RefreshCw className="h-4 w-4 mr-1" /> Restore to Draft
+            </Button>
           )}
 
           {/* PAID state actions */}
@@ -382,15 +408,32 @@ export default function InvoiceDetailPage() {
             {/* Left column */}
             <VStack spacing={4} align="stretch">
               <div>
-                <Label className="text-sm font-semibold text-muted-foreground">
-                  Customer
-                </Label>
-                <p className="font-medium text-lg">
-                  {invoice.subscription?.user?.name || '-'}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {invoice.subscription?.user?.email || '-'}
-                </p>
+                <Flex align="center" gap={4}>
+                  <div className="flex-1">
+                    <Label className="text-sm font-semibold text-muted-foreground">
+                      Customer
+                    </Label>
+                    <p className="font-medium text-lg">
+                      {invoice.subscription?.user?.name || '-'}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {invoice.subscription?.user?.email || '-'}
+                    </p>
+                  </div>
+                  {/* Paid checkbox - only show in CONFIRMED state */}
+                  {invoice.status === 'CONFIRMED' && (
+                    <Flex align="center" gap={2}>
+                      <Label className="text-sm font-semibold text-muted-foreground">
+                        paid
+                      </Label>
+                      <Checkbox
+                        isChecked={isPaid}
+                        isDisabled
+                        size="lg"
+                      />
+                    </Flex>
+                  )}
+                </Flex>
               </div>
               <div>
                 <Label className="text-sm font-semibold text-muted-foreground">
@@ -691,7 +734,7 @@ export default function InvoiceDetailPage() {
       <FormDialog
         isOpen={isPaymentOpen}
         onClose={onPaymentClose}
-        title="Record Payment"
+        title="Payment"
         hideFooter
       >
         <PaymentForm
@@ -712,7 +755,7 @@ export default function InvoiceDetailPage() {
           >
             {recordPaymentMutation.isPending
               ? 'Recording...'
-              : 'Payment'}
+              : 'payment'}
           </Button>
         </Flex>
       </FormDialog>

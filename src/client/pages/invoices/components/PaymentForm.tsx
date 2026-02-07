@@ -17,9 +17,7 @@ interface PaymentFormProps {
 
 export function PaymentForm({ balanceDue, onSubmit, isLoading }: PaymentFormProps) {
   const [amount, setAmount] = useState(balanceDue.toFixed(2));
-  const [paymentMethod, setPaymentMethod] = useState('CREDIT_CARD');
-  const [reference, setReference] = useState('');
-  const [notes, setNotes] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('CASH');
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -27,15 +25,31 @@ export function PaymentForm({ balanceDue, onSubmit, isLoading }: PaymentFormProp
     onSubmit({
       amount: parseFloat(amount),
       paymentMethod,
-      reference: reference || undefined,
-      notes: notes || undefined,
-      paymentDate: paymentDate || undefined,
+      paymentDate: paymentDate ? new Date(paymentDate).toISOString() : undefined,
     });
   };
 
   return (
     <form onSubmit={handleSubmit}>
       <VStack spacing={4} align="stretch">
+        <div>
+          <Label htmlFor="paymentMethod">Payment Method *</Label>
+          <select
+            id="paymentMethod"
+            className="w-full mt-1 px-3 py-2 border rounded-md"
+            value={paymentMethod}
+            onChange={(e) => setPaymentMethod(e.target.value)}
+            required
+            disabled={isLoading}
+          >
+            <option value="CASH">Cash</option>
+            <option value="BANK_TRANSFER">Online</option>
+          </select>
+          <p className="text-xs text-muted-foreground mt-1">
+            Online or Cash
+          </p>
+        </div>
+
         <div>
           <Label htmlFor="amount">Amount *</Label>
           <Input
@@ -49,27 +63,6 @@ export function PaymentForm({ balanceDue, onSubmit, isLoading }: PaymentFormProp
             required
             disabled={isLoading}
           />
-          <p className="text-xs text-muted-foreground mt-1">
-            Balance due: ${balanceDue.toFixed(2)}
-          </p>
-        </div>
-
-        <div>
-          <Label htmlFor="paymentMethod">Payment Method *</Label>
-          <select
-            id="paymentMethod"
-            className="w-full mt-1 px-3 py-2 border rounded-md"
-            value={paymentMethod}
-            onChange={(e) => setPaymentMethod(e.target.value)}
-            required
-            disabled={isLoading}
-          >
-            <option value="CREDIT_CARD">Credit Card</option>
-            <option value="BANK_TRANSFER">Bank Transfer</option>
-            <option value="CASH">Cash</option>
-            <option value="CHECK">Check</option>
-            <option value="OTHER">Other</option>
-          </select>
         </div>
 
         <div>
@@ -80,28 +73,6 @@ export function PaymentForm({ balanceDue, onSubmit, isLoading }: PaymentFormProp
             value={paymentDate}
             onChange={(e) => setPaymentDate(e.target.value)}
             required
-            disabled={isLoading}
-          />
-        </div>
-
-        <div>
-          <Label htmlFor="reference">Reference / Transaction ID</Label>
-          <Input
-            id="reference"
-            value={reference}
-            onChange={(e) => setReference(e.target.value)}
-            placeholder="e.g., TXN-12345"
-            disabled={isLoading}
-          />
-        </div>
-
-        <div>
-          <Label htmlFor="notes">Notes</Label>
-          <Input
-            id="notes"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Additional notes about this payment"
             disabled={isLoading}
           />
         </div>

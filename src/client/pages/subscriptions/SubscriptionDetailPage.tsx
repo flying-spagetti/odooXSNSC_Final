@@ -21,8 +21,9 @@ import {
   TabPanel,
   Checkbox,
 } from '@chakra-ui/react';
-import { ArrowLeft, FileText, Plus, Send, Check, Eye, RefreshCw, TrendingUp, X, Trash2, Save } from 'lucide-react';
-import { subscriptionApi, userApi, Subscription } from '@/lib/api';
+import { ArrowLeft, FileText, Plus, Send, Check, Eye, RefreshCw, TrendingUp, X, Trash2, Save, DollarSign } from 'lucide-react';
+import { subscriptionApi, userApi, invoiceApi, Subscription } from '@/lib/api';
+import { PaymentForm } from '@/pages/invoices/components/PaymentForm';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -43,8 +44,10 @@ export default function SubscriptionDetailPage() {
   const { isOpen: isConfirmOpen, onOpen: onConfirmOpen, onClose: onConfirmClose } = useDisclosure();
   const { isOpen: isInvoiceOpen, onOpen: onInvoiceOpen, onClose: onInvoiceClose } = useDisclosure();
   const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
+  const { isOpen: isPaymentOpen, onOpen: onPaymentOpen, onClose: onPaymentClose } = useDisclosure();
   const [startDate, setStartDate] = useState('');
   const [periodStart, setPeriodStart] = useState('');
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['subscription', id],
@@ -175,6 +178,31 @@ export default function SubscriptionDetailPage() {
     },
   });
 
+  const recordPaymentMutation = useMutation({
+    mutationFn: (data: { invoiceId: string; paymentData: any }) =>
+      invoiceApi.recordPayment(data.invoiceId, data.paymentData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['subscription', id] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      toast({
+        title: 'Payment recorded',
+        description: 'Payment has been recorded successfully',
+        status: 'success',
+        duration: 5000,
+      });
+      onPaymentClose();
+      setSelectedInvoiceId(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to record payment',
+        status: 'error',
+        duration: 5000,
+      });
+    },
+  });
+
   const subscription = data?.data.subscription;
 
   if (isLoading) {
@@ -255,8 +283,38 @@ export default function SubscriptionDetailPage() {
       toast({ title: 'Validation error', description: 'Please select a period start date', status: 'error', duration: 3000 });
       return;
     }
-    generateInvoiceMutation.mutate(periodStart);
+    // Convert date string (YYYY-MM-DD) to ISO datetime string
+    const periodStartISO = new Date(periodStart + 'T00:00:00.000Z').toISOString();
+    generateInvoiceMutation.mutate(periodStartISO);
   };
+
+  const handleOpenPayment = (invoiceId: string) => {
+    setSelectedInvoiceId(invoiceId);
+    onPaymentOpen();
+  };
+
+  const handleRecordPayment = (data: any) => {
+    if (selectedInvoiceId) {
+      recordPaymentMutation.mutate({ invoiceId: selectedInvoiceId, paymentData: data });
+    }
+  };
+
+  // Find the most recent unpaid invoice
+  const getUnpaidInvoice = () => {
+    if (!subscription.invoices || subscription.invoices.length === 0) return null;
+    return subscription.invoices
+      .filter((inv: any) => {
+        const total = parseFloat(inv.total || '0');
+        const paid = parseFloat(inv.paidAmount || '0');
+        return inv.status === 'CONFIRMED' && (total - paid) > 0;
+      })
+      .sort((a: any, b: any) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime())[0];
+  };
+
+  const unpaidInvoice = getUnpaidInvoice();
+  const balanceDue = unpaidInvoice
+    ? parseFloat(unpaidInvoice.total || '0') - parseFloat(unpaidInvoice.paidAmount || '0')
+    : 0;
 
   const defaultPeriodStart = subscription.nextBillingDate
     ? new Date(subscription.nextBillingDate).toISOString().split('T')[0]
@@ -272,11 +330,11 @@ export default function SubscriptionDetailPage() {
   const getStatusStepIndex = () => {
     switch (subscription.status) {
       case 'DRAFT': return 0;
-      case 'QUOTATION': return 1;
+      case 'QUOTATION': return 1; // Quotation sent
       case 'CONFIRMED':
       case 'ACTIVE':
       case 'CLOSED':
-        return 2;
+        return 2; // Confirmed
       default: return 0;
     }
   };
@@ -320,9 +378,14 @@ export default function SubscriptionDetailPage() {
           )}
 
           {subscription.status === 'DRAFT' && (
-            <Button size="sm" onClick={() => quoteMutation.mutate()} disabled={quoteMutation.isPending}>
-              <Send className="h-4 w-4 mr-1" /> Send
-            </Button>
+            <>
+              <Button size="sm" onClick={() => quoteMutation.mutate()} disabled={quoteMutation.isPending}>
+                <Send className="h-4 w-4 mr-1" /> Send
+              </Button>
+              <Button size="sm" onClick={onConfirmOpen} disabled={confirmMutation.isPending}>
+                <Check className="h-4 w-4 mr-1" /> Confirm
+              </Button>
+            </>
           )}
 
           {subscription.status === 'QUOTATION' && (
@@ -331,11 +394,14 @@ export default function SubscriptionDetailPage() {
             </Button>
           )}
 
-          <Button size="sm" variant="outline" onClick={() => {
-            window.open(`/subscriptions/${id}/preview`, '_blank');
-          }}>
-            <Eye className="h-4 w-4 mr-1" /> Preview
-          </Button>
+          {/* Preview button only shows in QUOTATION state */}
+          {subscription.status === 'QUOTATION' && (
+            <Button size="sm" variant="outline" onClick={() => {
+              window.open(`/subscriptions/${id}/preview`, '_blank');
+            }}>
+              <Eye className="h-4 w-4 mr-1" /> Preview
+            </Button>
+          )}
         </Flex>
 
         {/* Status state badges */}
@@ -361,21 +427,41 @@ export default function SubscriptionDetailPage() {
         </Flex>
       </Flex>
 
-      {/* Lifecycle action buttons: Create Invoice, Cancel, Renew, Upsell, Close */}
-      {subscription.status !== 'DRAFT' && (
-        <Flex gap={2} className="mb-4" wrap="wrap">
-          <Button
-            size="sm"
-            onClick={onInvoiceOpen}
-            disabled={!['CONFIRMED', 'ACTIVE'].includes(subscription.status)}
-          >
-            <FileText className="h-4 w-4 mr-1" /> Create Invoice
-          </Button>
+      {/* Lifecycle action buttons: Create Invoice, Cancel, Renew, Upsell - Only in CONFIRMED state */}
+      {subscription.status === 'CONFIRMED' && (
+        <>
+          <Flex gap={2} className="mb-4" wrap="wrap">
+            <Button
+              size="sm"
+              onClick={onInvoiceOpen}
+            >
+              <FileText className="h-4 w-4 mr-1" /> Create Invoice
+            </Button>
+            {/* Pay button - only enabled if there's an unpaid invoice */}
+            {unpaidInvoice ? (
+              <Button
+                size="sm"
+                onClick={() => handleOpenPayment(unpaidInvoice.id)}
+              >
+                <DollarSign className="h-4 w-4 mr-1" /> Pay Invoice
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled
+                title={subscription.invoices && subscription.invoices.length > 0 
+                  ? "All invoices are paid. Create a new invoice to make a payment." 
+                  : "Create and confirm an invoice first, then you can make a payment"}
+              >
+                <DollarSign className="h-4 w-4 mr-1" /> Pay Invoice
+              </Button>
+            )}
           <Button
             size="sm"
             variant="outline"
             onClick={() => cancelMutation.mutate()}
-            disabled={cancelMutation.isPending || !['QUOTATION', 'CONFIRMED', 'ACTIVE'].includes(subscription.status)}
+            disabled={cancelMutation.isPending}
           >
             <X className="h-4 w-4 mr-1" /> Cancel
           </Button>
@@ -394,11 +480,27 @@ export default function SubscriptionDetailPage() {
           >
             <TrendingUp className="h-4 w-4 mr-1" /> Upsell
           </Button>
+          </Flex>
+          {/* Helper message for Pay button */}
+          {!unpaidInvoice && (
+            <Box className="mb-4 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <strong>To make a payment:</strong> First create an invoice using "Create Invoice" button above, 
+                then confirm it on the invoice page. Once confirmed, the "Pay Invoice" button will be enabled.
+              </p>
+            </Box>
+          )}
+        </>
+      )}
+
+      {/* Close button for other states */}
+      {subscription.status !== 'DRAFT' && subscription.status !== 'CONFIRMED' && (
+        <Flex gap={2} className="mb-4" wrap="wrap">
           <Button
             size="sm"
             variant="outline"
             onClick={() => closeMutation.mutate()}
-            disabled={closeMutation.isPending || !['QUOTATION', 'CONFIRMED', 'ACTIVE'].includes(subscription.status)}
+            disabled={closeMutation.isPending || !['QUOTATION', 'ACTIVE'].includes(subscription.status)}
           >
             {closeMutation.isPending ? 'Closing...' : 'Close'}
           </Button>
@@ -732,6 +834,36 @@ export default function SubscriptionDetailPage() {
         variant="destructive"
         isLoading={deleteMutation.isPending}
       />
+
+      {/* Payment Dialog */}
+      {selectedInvoiceId && (
+        <FormDialog
+          isOpen={isPaymentOpen}
+          onClose={onPaymentClose}
+          title="Payment"
+          hideFooter
+        >
+          <PaymentForm
+            balanceDue={balanceDue}
+            onSubmit={handleRecordPayment}
+            isLoading={recordPaymentMutation.isPending}
+          />
+          <Flex justify="flex-end" gap={2} className="mt-4">
+            <Button variant="outline" onClick={onPaymentClose}>
+              Discard
+            </Button>
+            <Button
+              onClick={() => {
+                const form = document.querySelector('form');
+                form?.requestSubmit();
+              }}
+              disabled={recordPaymentMutation.isPending}
+            >
+              {recordPaymentMutation.isPending ? 'Recording...' : 'payment'}
+            </Button>
+          </Flex>
+        </FormDialog>
+      )}
     </Box>
   );
 }

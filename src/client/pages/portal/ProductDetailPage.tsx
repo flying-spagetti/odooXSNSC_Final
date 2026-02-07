@@ -30,6 +30,7 @@ import {
   ModalCloseButton,
   useDisclosure,
   Badge,
+  Image,
 } from '@chakra-ui/react';
 import { ArrowLeft, ShoppingCart } from 'lucide-react';
 import { productApi, planApi, ProductVariant, RecurringPlan } from '@/lib/api';
