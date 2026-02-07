@@ -255,15 +255,17 @@ export class InvoiceService {
    */
   async list(filters: {
     subscriptionId?: string;
+    userId?: string;
     status?: InvoiceStatus;
     limit?: number;
     offset?: number;
   }) {
-    const { subscriptionId, status, limit = 20, offset = 0 } = filters;
+    const { subscriptionId, userId, status, limit = 20, offset = 0 } = filters;
 
     const where: Record<string, unknown> = {};
     if (subscriptionId) where.subscriptionId = subscriptionId;
     if (status) where.status = status;
+    if (userId) where.subscription = { userId };
 
     const [items, total] = await Promise.all([
       this.prisma.invoice.findMany({
