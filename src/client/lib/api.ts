@@ -48,6 +48,7 @@ export interface Product {
   id: string;
   name: string;
   description?: string;
+  imageUrl?: string;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -62,6 +63,7 @@ export interface ProductVariant {
   sku: string;
   description?: string;
   basePrice: string;
+  imageUrl?: string;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -236,17 +238,46 @@ export const productApi = {
   get: (id: string) =>
     api.get<{ product: Product }>(`/products/${id}`),
   
-  create: (data: { name: string; description?: string }) =>
-    api.post<{ product: Product }>('/products', data),
+  create: (data: { name: string; description?: string; image?: File }) => {
+    const formData = new FormData();
+    formData.append('name', data.name);
+    if (data.description) formData.append('description', data.description);
+    if (data.image) formData.append('image', data.image);
+    return api.post<{ product: Product }>('/products', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
   
-  update: (id: string, data: { name?: string; description?: string; isActive?: boolean }) =>
-    api.patch<{ product: Product }>(`/products/${id}`, data),
+  update: (id: string, data: { name?: string; description?: string; isActive?: boolean; image?: File }) => {
+    if (data.image) {
+      const formData = new FormData();
+      if (data.name) formData.append('name', data.name);
+      if (data.description) formData.append('description', data.description);
+      formData.append('image', data.image);
+      return api.patch<{ product: Product }>(`/products/${id}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+    }
+    return api.patch<{ product: Product }>(`/products/${id}`, data);
+  },
   
   listVariants: (productId: string) =>
     api.get<{ variants: ProductVariant[] }>(`/products/${productId}/variants`),
   
-  createVariant: (productId: string, data: { name: string; sku: string; basePrice: number; description?: string }) =>
-    api.post<{ variant: ProductVariant }>(`/products/${productId}/variants`, data),
+  createVariant: (productId: string, data: { name: string; sku: string; basePrice: number; description?: string; image?: File }) => {
+    if (data.image) {
+      const formData = new FormData();
+      formData.append('name', data.name);
+      formData.append('sku', data.sku);
+      formData.append('basePrice', data.basePrice.toString());
+      if (data.description) formData.append('description', data.description);
+      formData.append('image', data.image);
+      return api.post<{ variant: ProductVariant }>(`/products/${productId}/variants`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+    }
+    return api.post<{ variant: ProductVariant }>(`/products/${productId}/variants`, data);
+  },
   
   updateVariant: (productId: string, variantId: string, data: { name?: string; basePrice?: number; description?: string; isActive?: boolean }) =>
     api.patch<{ variant: ProductVariant }>(`/products/${productId}/variants/${variantId}`, data),

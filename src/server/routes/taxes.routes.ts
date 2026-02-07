@@ -39,11 +39,13 @@ const taxesRoutes: FastifyPluginAsync = async (fastify) => {
       const query = z
         .object({
           isActive: z.coerce.boolean().optional(),
+          limit: z.coerce.number().min(1).max(100).default(100),
+          offset: z.coerce.number().min(0).default(0),
         })
         .parse(request.query);
 
-      const taxRates = await taxService.list({ isActive: query.isActive });
-      return { taxRates };
+      const result = await taxService.list({ isActive: query.isActive, limit: query.limit, offset: query.offset });
+      return result;
     }
   );
 

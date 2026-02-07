@@ -21,49 +21,55 @@ export class ReportService {
   async getSummary(filters: { from?: Date; to?: Date }): Promise<ReportSummary> {
     const { from, to } = filters;
 
-    // Active subscriptions
+    // Active subscriptions (not filtered by date - current state)
     const activeSubscriptionsCount = await this.prisma.subscription.count({
       where: {
         status: 'ACTIVE',
       },
     });
 
+    // Build date filter for invoices (use issueDate for revenue reporting)
+    const invoiceDateFilter = from || to
+      ? {
+          issueDate: {
+            ...(from ? { gte: from } : {}),
+            ...(to ? { lte: to } : {}),
+          },
+        }
+      : {};
+
     // Total revenue (sum of all PAID invoices)
     const revenueResult = await this.prisma.invoice.aggregate({
       where: {
         status: 'PAID',
-        ...(from || to
-          ? {
-              createdAt: {
-                ...(from ? { gte: from } : {}),
-                ...(to ? { lte: to } : {}),
-              },
-            }
-          : {}),
+        ...invoiceDateFilter,
       },
       _sum: {
         total: true,
       },
     });
 
+    // Build date filter for payments
+    const paymentDateFilter = from || to
+      ? {
+          paymentDate: {
+            ...(from ? { gte: from } : {}),
+            ...(to ? { lte: to } : {}),
+          },
+        }
+      : {};
+
     // Total payments
     const paymentsResult = await this.prisma.payment.aggregate({
       where: {
-        ...(from || to
-          ? {
-              paymentDate: {
-                ...(from ? { gte: from } : {}),
-                ...(to ? { lte: to } : {}),
-              },
-            }
-          : {}),
+        ...paymentDateFilter,
       },
       _sum: {
         amount: true,
       },
     });
 
-    // Overdue invoices
+    // Overdue invoices (not filtered by date - current state)
     const now = new Date();
     const overdueInvoicesCount = await this.prisma.invoice.count({
       where: {
@@ -72,11 +78,12 @@ export class ReportService {
       },
     });
 
-    // Invoice counts by status
+    // Invoice counts by status (filtered by date if provided)
+    const invoiceStatusWhere = from || to ? invoiceDateFilter : {};
     const [draftInvoicesCount, confirmedInvoicesCount, paidInvoicesCount] = await Promise.all([
-      this.prisma.invoice.count({ where: { status: 'DRAFT' } }),
-      this.prisma.invoice.count({ where: { status: 'CONFIRMED' } }),
-      this.prisma.invoice.count({ where: { status: 'PAID' } }),
+      this.prisma.invoice.count({ where: { status: 'DRAFT', ...invoiceStatusWhere } }),
+      this.prisma.invoice.count({ where: { status: 'CONFIRMED', ...invoiceStatusWhere } }),
+      this.prisma.invoice.count({ where: { status: 'PAID', ...invoiceStatusWhere } }),
     ]);
 
     return {
@@ -108,16 +115,16 @@ export class ReportService {
     const invoices = await this.prisma.invoice.findMany({
       where: {
         status: 'PAID',
-        createdAt: {
+        issueDate: {
           gte: filters.from,
           lte: filters.to,
         },
       },
       select: {
-        createdAt: true,
+        issueDate: true,
         total: true,
       },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { issueDate: 'asc' },
     });
 
     return invoices;

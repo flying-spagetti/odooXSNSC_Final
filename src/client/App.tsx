@@ -5,6 +5,9 @@ import { ChakraProvider } from '@chakra-ui/react';
 import { useAuthStore } from './store/authStore';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
+import PortalLayout from './components/PortalLayout';
+import RoleBasedRedirect from './components/RoleBasedRedirect';
+import AdminOnlyRoute from './components/AdminOnlyRoute';
 
 // Pages
 import Login from './pages/Login';
@@ -24,6 +27,12 @@ import ReportingPage from './pages/ReportingPage';
 import UsersContactsPage from './pages/UsersContactsPage';
 import ConfigurationPage from './pages/ConfigurationPage';
 import MyProfilePage from './pages/MyProfilePage';
+
+// Portal Pages
+import HomePage from './pages/portal/HomePage';
+import ShopPage from './pages/portal/ShopPage';
+import PortalProductDetailPage from './pages/portal/ProductDetailPage';
+import CartPage from './pages/portal/CartPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -53,14 +62,26 @@ function App() {
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             
-            {/* Dashboard */}
+            {/* Root route - redirects based on role */}
             <Route
               path="/"
               element={
                 <ProtectedRoute>
-                  <Layout>
-                    <Dashboard />
-                  </Layout>
+                  <RoleBasedRedirect />
+                </ProtectedRoute>
+              }
+            />
+            
+            {/* Admin Dashboard */}
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <AdminOnlyRoute>
+                    <Layout>
+                      <Dashboard />
+                    </Layout>
+                  </AdminOnlyRoute>
                 </ProtectedRoute>
               }
             />
@@ -70,9 +91,11 @@ function App() {
               path="/products"
               element={
                 <ProtectedRoute>
-                  <Layout>
-                    <ProductsPage />
-                  </Layout>
+                  <AdminOnlyRoute>
+                    <Layout>
+                      <ProductsPage />
+                    </Layout>
+                  </AdminOnlyRoute>
                 </ProtectedRoute>
               }
             />
@@ -80,9 +103,11 @@ function App() {
               path="/products/:id"
               element={
                 <ProtectedRoute>
-                  <Layout>
-                    <ProductDetailPage />
-                  </Layout>
+                  <AdminOnlyRoute>
+                    <Layout>
+                      <ProductDetailPage />
+                    </Layout>
+                  </AdminOnlyRoute>
                 </ProtectedRoute>
               }
             />
@@ -196,8 +221,78 @@ function App() {
                 </ProtectedRoute>
               }
             />
+
+            {/* Portal Routes */}
+            <Route
+              path="/portal"
+              element={
+                <ProtectedRoute>
+                  <PortalLayout>
+                    <HomePage />
+                  </PortalLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/portal/shop"
+              element={
+                <ProtectedRoute>
+                  <PortalLayout>
+                    <ShopPage />
+                  </PortalLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/portal/products/:id"
+              element={
+                <ProtectedRoute>
+                  <PortalLayout>
+                    <PortalProductDetailPage />
+                  </PortalLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/portal/cart"
+              element={
+                <ProtectedRoute>
+                  <PortalLayout>
+                    <CartPage />
+                  </PortalLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/portal/my-account"
+              element={
+                <ProtectedRoute>
+                  <PortalLayout>
+                    <MyProfilePage />
+                  </PortalLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/portal/subscriptions"
+              element={
+                <ProtectedRoute>
+                  <PortalLayout>
+                    <SubscriptionsPage />
+                  </PortalLayout>
+                </ProtectedRoute>
+              }
+            />
             
-            <Route path="*" element={<Navigate to="/" replace />} />
+            {/* Catch-all route - redirects based on role */}
+            <Route
+              path="*"
+              element={
+                <ProtectedRoute>
+                  <RoleBasedRedirect />
+                </ProtectedRoute>
+              }
+            />
           </Routes>
         </BrowserRouter>
       </ChakraProvider>

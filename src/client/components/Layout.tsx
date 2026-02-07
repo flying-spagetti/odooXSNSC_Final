@@ -47,7 +47,7 @@ export default function Layout({ children }: LayoutProps) {
               display={{ base: 'flex', md: 'none' }}
               onClick={onOpen}
             />
-            <Link to="/" className="text-xl font-bold">
+            <Link to={user?.role === 'PORTAL' ? '/portal' : '/dashboard'} className="text-xl font-bold">
               SubsManager
             </Link>
           </Flex>

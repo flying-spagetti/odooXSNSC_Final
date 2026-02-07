@@ -39,13 +39,22 @@ export class DiscountService {
     return discount;
   }
 
-  async list(filters: { isActive?: boolean }) {
-    const { isActive = true } = filters;
+  async list(filters: { isActive?: boolean; limit?: number; offset?: number }) {
+    const { isActive = true, limit = 100, offset = 0 } = filters;
 
-    return this.prisma.discount.findMany({
-      where: isActive !== undefined ? { isActive } : {},
-      orderBy: { name: 'asc' },
-    });
+    const where = isActive !== undefined ? { isActive } : {};
+
+    const [items, total] = await Promise.all([
+      this.prisma.discount.findMany({
+        where,
+        orderBy: { name: 'asc' },
+        take: limit,
+        skip: offset,
+      }),
+      this.prisma.discount.count({ where }),
+    ]);
+
+    return { items, total, limit, offset };
   }
 
   async update(discountId: string, data: Partial<CreateDiscountData>) {

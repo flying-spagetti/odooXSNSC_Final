@@ -25,7 +25,8 @@ export type AuditAction =
   | 'STATUS_CHANGE'
   | 'PAYMENT_RECORDED'
   | 'LINE_ADDED'
-  | 'LINE_REMOVED';
+  | 'LINE_REMOVED'
+  | 'RENEWED';
 
 export interface AuditLogData {
   userId: string;
@@ -51,7 +52,7 @@ export class AuditService {
       data: {
         userId: data.userId,
         entityType: data.entityType,
-        entityId: data.entityId,
+        entityId: String(data.entityId),
         action: data.action,
         oldValue: data.oldValue ? JSON.stringify(data.oldValue) : null,
         newValue: data.newValue ? JSON.stringify(data.newValue) : null,
@@ -91,7 +92,7 @@ export class AuditService {
     return this.prisma.auditLog.findMany({
       where: {
         entityType,
-        entityId,
+        entityId: String(entityId),
       },
       orderBy: { createdAt: 'desc' },
       take: limit,

@@ -37,7 +37,7 @@ export default function ProductDetailPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: { name?: string; description?: string }) =>
+    mutationFn: (data: { name?: string; description?: string; image?: File }) =>
       productApi.update(id!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['product', id] });
@@ -60,7 +60,7 @@ export default function ProductDetailPage() {
   });
 
   const createVariantMutation = useMutation({
-    mutationFn: (data: { name: string; sku: string; basePrice: number; description?: string }) =>
+    mutationFn: (data: { name: string; sku: string; basePrice: number; description?: string; image?: File }) =>
       productApi.createVariant(id!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['product-variants', id] });
@@ -287,7 +287,7 @@ export default function ProductDetailPage() {
         hideFooter
       >
         <ProductForm
-          initialData={{ name: product.name, description: product.description || '' }}
+          initialData={{ name: product.name, description: product.description || '', imageUrl: product.imageUrl }}
           onSubmit={(data) => updateMutation.mutate(data)}
           isLoading={updateMutation.isPending}
         />
@@ -320,6 +320,7 @@ export default function ProductDetailPage() {
             sku: selectedVariant.sku,
             basePrice: parseFloat(selectedVariant.basePrice),
             description: selectedVariant.description || '',
+            imageUrl: selectedVariant.imageUrl,
           } : undefined}
           onSubmit={(data) => {
             if (selectedVariant) {

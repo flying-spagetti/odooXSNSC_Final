@@ -73,7 +73,7 @@ export default function ProductsPage() {
     },
   ];
 
-  const handleCreateProduct = (data: { name: string; description?: string }) => {
+  const handleCreateProduct = (data: { name: string; description?: string; image?: File }) => {
     createMutation.mutate(data);
   };
 

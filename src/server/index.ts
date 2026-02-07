@@ -5,6 +5,9 @@
 
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import multipart from '@fastify/multipart';
+import fastifyStatic from '@fastify/static';
+import { join } from 'path';
 import { config } from './config';
 import { logger } from './utils/logger';
 
@@ -36,6 +39,20 @@ async function buildServer() {
   await fastify.register(cors, {
     origin: process.env.CORS_ORIGIN || '*',
     credentials: true,
+  });
+
+  // Register multipart for file uploads
+  await fastify.register(multipart, {
+    limits: {
+      fileSize: 5 * 1024 * 1024, // 5MB
+    },
+  });
+
+  // Register static file serving for uploads
+  const uploadDir = process.env.UPLOAD_DIR || join(process.cwd(), 'uploads');
+  await fastify.register(fastifyStatic, {
+    root: uploadDir,
+    prefix: '/uploads/',
   });
 
   // Register plugins

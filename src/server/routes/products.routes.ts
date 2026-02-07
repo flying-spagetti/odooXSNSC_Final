@@ -6,6 +6,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { ProductService } from '../services/product.service';
+import { saveUploadedFile } from '../utils/fileUpload';
 
 const CreateProductSchema = z.object({
   name: z.string().min(2),
@@ -29,8 +30,29 @@ const productsRoutes: FastifyPluginAsync = async (fastify) => {
       onRequest: [fastify.authenticate, fastify.authorize('products:create')],
     },
     async (request, reply) => {
-      const data = CreateProductSchema.parse(request.body);
-      const product = await productService.createProduct(data);
+      const parts = request.parts();
+      let name = '';
+      let description = '';
+      let imageUrl: string | undefined;
+
+      for await (const part of parts) {
+        if (part.type === 'file') {
+          imageUrl = await saveUploadedFile(part);
+        } else {
+          const field = part as { fieldname: string; value: string };
+          if (field.fieldname === 'name') {
+            name = field.value;
+          } else if (field.fieldname === 'description') {
+            description = field.value;
+          }
+        }
+      }
+
+      const data = CreateProductSchema.parse({ name, description });
+      const product = await productService.createProduct({
+        ...data,
+        imageUrl,
+      });
       return { product };
     }
   );
@@ -76,9 +98,33 @@ const productsRoutes: FastifyPluginAsync = async (fastify) => {
     },
     async (request, reply) => {
       const params = z.object({ id: z.string() }).parse(request.params);
-      const data = CreateProductSchema.partial().parse(request.body);
-      const product = await productService.updateProduct(params.id, data);
-      return { product };
+      
+      // Check if multipart form data
+      if (request.isMultipart()) {
+        const parts = request.parts();
+        const updateData: any = {};
+        let imageUrl: string | undefined;
+
+        for await (const part of parts) {
+          if (part.type === 'file') {
+            imageUrl = await saveUploadedFile(part);
+            updateData.imageUrl = imageUrl;
+          } else {
+            const field = part as { fieldname: string; value: string };
+            if (field.fieldname === 'name' || field.fieldname === 'description') {
+              updateData[field.fieldname] = field.value;
+            }
+          }
+        }
+
+        const data = CreateProductSchema.partial().parse(updateData);
+        const product = await productService.updateProduct(params.id, data);
+        return { product };
+      } else {
+        const data = CreateProductSchema.partial().parse(request.body);
+        const product = await productService.updateProduct(params.id, data);
+        return { product };
+      }
     }
   );
 
@@ -90,12 +136,37 @@ const productsRoutes: FastifyPluginAsync = async (fastify) => {
     },
     async (request, reply) => {
       const params = z.object({ id: z.string() }).parse(request.params);
-      const data = CreateVariantSchema.parse(request.body);
-      const variant = await productService.createVariant({
-        ...data,
-        productId: params.id,
-      });
-      return { variant };
+      
+      // Check if multipart form data
+      if (request.isMultipart()) {
+        const parts = request.parts();
+        const variantData: any = { productId: params.id };
+        let imageUrl: string | undefined;
+
+        for await (const part of parts) {
+          if (part.type === 'file') {
+            imageUrl = await saveUploadedFile(part);
+            variantData.imageUrl = imageUrl;
+          } else {
+            const field = part as { fieldname: string; value: string };
+            if (field.fieldname === 'name') variantData.name = field.value;
+            else if (field.fieldname === 'sku') variantData.sku = field.value;
+            else if (field.fieldname === 'basePrice') variantData.basePrice = parseFloat(field.value);
+            else if (field.fieldname === 'description') variantData.description = field.value;
+          }
+        }
+
+        const data = CreateVariantSchema.parse(variantData);
+        const variant = await productService.createVariant(data);
+        return { variant };
+      } else {
+        const data = CreateVariantSchema.parse(request.body);
+        const variant = await productService.createVariant({
+          ...data,
+          productId: params.id,
+        });
+        return { variant };
+      }
     }
   );
 

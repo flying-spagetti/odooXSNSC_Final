@@ -9,6 +9,7 @@ import { NotFoundError } from '../domain/errors';
 export interface CreateProductData {
   name: string;
   description?: string;
+  imageUrl?: string;
 }
 
 export interface CreateVariantData {
@@ -17,6 +18,7 @@ export interface CreateVariantData {
   sku: string;
   basePrice: number;
   description?: string;
+  imageUrl?: string;
 }
 
 export class ProductService {
@@ -27,6 +29,7 @@ export class ProductService {
       data: {
         name: data.name,
         description: data.description,
+        imageUrl: data.imageUrl,
       },
     });
   }
@@ -88,6 +91,7 @@ export class ProductService {
         sku: data.sku,
         basePrice: data.basePrice,
         description: data.description,
+        imageUrl: data.imageUrl,
       },
       include: {
         product: true,

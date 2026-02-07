@@ -360,7 +360,7 @@ export class SubscriptionService {
           entityType: 'SUBSCRIPTION',
           entityId: subscriptionId,
           action: 'UPDATED',
-          newValue: data,
+          newValue: data as any,
         },
         tx
       );

@@ -37,13 +37,22 @@ export class TaxService {
     return taxRate;
   }
 
-  async list(filters: { isActive?: boolean }) {
-    const { isActive = true } = filters;
+  async list(filters: { isActive?: boolean; limit?: number; offset?: number }) {
+    const { isActive = true, limit = 100, offset = 0 } = filters;
 
-    return this.prisma.taxRate.findMany({
-      where: isActive !== undefined ? { isActive } : {},
-      orderBy: { name: 'asc' },
-    });
+    const where = isActive !== undefined ? { isActive } : {};
+
+    const [items, total] = await Promise.all([
+      this.prisma.taxRate.findMany({
+        where,
+        orderBy: { name: 'asc' },
+        take: limit,
+        skip: offset,
+      }),
+      this.prisma.taxRate.count({ where }),
+    ]);
+
+    return { items, total, limit, offset };
   }
 
   async update(taxRateId: string, data: Partial<CreateTaxRateData>) {

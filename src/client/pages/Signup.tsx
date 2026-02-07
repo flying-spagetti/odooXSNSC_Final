@@ -65,7 +65,12 @@ export default function Signup() {
         status: 'success',
         duration: 3000,
       });
-      navigate('/');
+      // Redirect based on user role - use replace to avoid back button issues
+      if (data.user.role === 'PORTAL') {
+        navigate('/portal', { replace: true });
+      } else {
+        navigate('/dashboard', { replace: true });
+      }
     } catch (error: any) {
       toast({
         title: 'Signup failed',

@@ -54,11 +54,11 @@ async function main() {
 
   // Create tax rates
   console.log('Creating tax rates...');
-  const taxRate = await prisma.taxRate.upsert({
-    where: { id: 'tax-vat-18' },
-    update: {},
-    create: {
-      id: 'tax-vat-18',
+  const existingTaxRate = await prisma.taxRate.findFirst({
+    where: { name: 'VAT 18%' },
+  });
+  const taxRate = existingTaxRate || await prisma.taxRate.create({
+    data: {
       name: 'VAT 18%',
       rate: 18,
       description: 'Standard VAT rate',
@@ -69,11 +69,11 @@ async function main() {
 
   // Create discounts
   console.log('Creating discounts...');
-  const discount = await prisma.discount.upsert({
-    where: { id: 'discount-10pct' },
-    update: {},
-    create: {
-      id: 'discount-10pct',
+  const existingDiscount = await prisma.discount.findFirst({
+    where: { name: '10% Off' },
+  });
+  const discount = existingDiscount || await prisma.discount.create({
+    data: {
       name: '10% Off',
       type: 'PERCENTAGE',
       value: 10,
