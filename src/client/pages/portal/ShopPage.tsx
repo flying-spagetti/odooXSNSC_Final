@@ -211,10 +211,10 @@ export default function ShopPage() {
                     size="sm"
                   >
                     <option value="all">All Prices</option>
-                    <option value="0-100">$0 - $100</option>
-                    <option value="100-500">$100 - $500</option>
-                    <option value="500-1000">$500 - $1,000</option>
-                    <option value="1000+">$1,000+</option>
+                    <option value="0-100">₹0 - ₹100</option>
+                    <option value="100-500">₹100 - ₹500</option>
+                    <option value="500-1000">₹500 - ₹1,000</option>
+                    <option value="1000+">₹1,000+</option>
                   </Select>
                 </Box>
               </VStack>

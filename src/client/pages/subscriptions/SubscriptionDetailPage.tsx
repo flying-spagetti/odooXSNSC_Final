@@ -618,12 +618,12 @@ export default function SubscriptionDetailPage() {
                             </span>
                           </Td>
                           <Td isNumeric>{line.quantity}</Td>
-                          <Td isNumeric>${parseFloat(line.unitPrice).toFixed(2)}</Td>
+                          <Td isNumeric>₹{parseFloat(line.unitPrice).toFixed(2)}</Td>
                           <Td isNumeric>
                             {line.discount
                               ? line.discount.type === 'PERCENTAGE'
                                 ? `${parseFloat(line.discount.value).toFixed(0)}%`
-                                : `$${parseFloat(line.discount.value).toFixed(2)}`
+                                : `₹${parseFloat(line.discount.value).toFixed(2)}`
                               : '-'}
                           </Td>
                           <Td isNumeric>
@@ -632,7 +632,7 @@ export default function SubscriptionDetailPage() {
                               : '-'}
                           </Td>
                           <Td isNumeric className="font-semibold">
-                            ${calculateLineTotal(line).toFixed(2)}
+                            ₹{calculateLineTotal(line).toFixed(2)}
                           </Td>
                         </Tr>
                       ))}
@@ -643,23 +643,23 @@ export default function SubscriptionDetailPage() {
                   <Box className="p-4 border-t space-y-2">
                     <Flex justify="flex-end" gap={8}>
                       <span className="text-muted-foreground">Subtotal</span>
-                      <span className="font-medium w-24 text-right">${totals.subtotal.toFixed(2)}</span>
+                      <span className="font-medium w-24 text-right">₹{totals.subtotal.toFixed(2)}</span>
                     </Flex>
                     {totals.discount > 0 && (
                       <Flex justify="flex-end" gap={8}>
                         <span className="text-muted-foreground">Discount</span>
-                        <span className="font-medium text-green-600 w-24 text-right">-${totals.discount.toFixed(2)}</span>
+                        <span className="font-medium text-green-600 w-24 text-right">-₹{totals.discount.toFixed(2)}</span>
                       </Flex>
                     )}
                     {totals.tax > 0 && (
                       <Flex justify="flex-end" gap={8}>
                         <span className="text-muted-foreground">Tax</span>
-                        <span className="font-medium w-24 text-right">${totals.tax.toFixed(2)}</span>
+                        <span className="font-medium w-24 text-right">₹{totals.tax.toFixed(2)}</span>
                       </Flex>
                     )}
                     <Flex justify="flex-end" gap={8} className="pt-2 border-t">
                       <span className="text-lg font-bold">Total</span>
-                      <span className="text-lg font-bold text-primary w-24 text-right">${totals.total.toFixed(2)}</span>
+                      <span className="text-lg font-bold text-primary w-24 text-right">₹{totals.total.toFixed(2)}</span>
                     </Flex>
                   </Box>
                 </Box>
@@ -750,7 +750,7 @@ export default function SubscriptionDetailPage() {
                     </p>
                   </Box>
                   <Flex align="center" gap={3}>
-                    <p className="font-semibold">${parseFloat(invoice.total).toFixed(2)}</p>
+                    <p className="font-semibold">₹{parseFloat(invoice.total).toFixed(2)}</p>
                     <StatusBadge status={invoice.status} type="invoice" />
                   </Flex>
                 </Flex>

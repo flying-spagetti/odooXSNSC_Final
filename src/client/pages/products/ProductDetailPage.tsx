@@ -147,7 +147,7 @@ export default function ProductDetailPage() {
     {
       header: 'Price',
       accessor: 'basePrice',
-      cell: (value) => <span>${parseFloat(value).toFixed(2)}</span>,
+      cell: (value) => <span>₹{parseFloat(value).toFixed(2)}</span>,
     },
     {
       header: 'Status',
@@ -329,7 +329,7 @@ export default function ProductDetailPage() {
                     <CardContent className="pt-0">
                       <Flex justify="space-between" align="center" mb={3}>
                         <ChakraText fontSize="lg" fontWeight="bold" color="primary">
-                          ${parseFloat(variant.basePrice).toFixed(2)}
+                          ₹{parseFloat(variant.basePrice).toFixed(2)}
                         </ChakraText>
                         <Badge 
                           variant={variant.isActive ? 'default' : 'secondary'}

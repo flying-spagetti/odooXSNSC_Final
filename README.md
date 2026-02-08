@@ -1,57 +1,169 @@
-# Subscription Management Platform - Backend
+# Subscription Management Platform
 
-A production-grade backend for managing subscriptions, invoicing, and payments. Built with **Node.js**, **TypeScript**, **Fastify**, **Prisma**, and **PostgreSQL**.
+A full-stack subscription management platform built with modern web technologies. This application provides comprehensive tools for managing subscriptions, invoicing, payments, and product catalogs, with separate interfaces for administrators and customers.
 
-## 🎯 Features
+## 🎯 Overview
+
+This platform enables businesses to manage recurring subscriptions, generate invoices, track payments, and maintain a product catalog. It features a dual-interface design: an admin/internal dashboard for business operations and a customer portal for shopping and subscription management.
+
+## ✨ Features
 
 ### Core Functionality
-- **Subscription Management**: Full lifecycle management (Draft → Quotation → Confirmed → Active → Closed)
-- **Idempotent Invoice Generation**: Safe, transactional invoice creation with period-based deduplication
-- **Payment Recording**: Automatic invoice status updates when fully paid
-- **Product Catalog**: Products, variants, pricing
-- **Recurring Plans**: Configurable billing periods (Daily, Weekly, Monthly, Yearly)
-- **Tax & Discount Management**: Flexible pricing calculations
-- **Role-Based Access Control (RBAC)**: ADMIN, INTERNAL, PORTAL roles with granular permissions
-- **Comprehensive Audit Trail**: All state changes logged with user, timestamp, and details
+
+- **Subscription Management**: Complete lifecycle management from draft to active to closed
+  - State machine enforcement (DRAFT → QUOTATION → CONFIRMED → ACTIVE → CLOSED)
+  - Recurring billing with configurable periods (Daily, Weekly, Monthly, Yearly)
+  - Subscription templates for quick setup
+  - Contact management per subscription
+
+- **Invoice Generation**: Automated and manual invoice creation
+  - Idempotent invoice generation (prevents duplicates)
+  - Period-based billing with automatic calculations
+  - Tax and discount application
+  - Payment tracking and status updates
+
+- **Product Catalog**: Comprehensive product management
+  - Products with multiple variants
+  - SKU management
+  - Image support
+  - Pricing configuration
+
+- **Payment Processing**: Multiple payment methods
+  - Bank transfer, credit card, cash, check, and other methods
+  - Payment recording and tracking
+  - Automatic invoice status updates when fully paid
+  - Razorpay integration support
+
+- **User Management**: Role-based access control
+  - Three user roles: ADMIN, INTERNAL, PORTAL
+  - User profile management
+  - Contact management
+  - Password reset functionality
+
+- **E-commerce Portal**: Customer-facing shopping experience
+  - Product browsing and search
+  - Shopping cart functionality
+  - Checkout process with address and payment selection
+  - Order history and subscription management
+  - Account management
+
+- **Reporting & Analytics**: Business intelligence
+  - Subscription metrics
+  - Revenue reports
+  - Summary reports with date ranges
+  - Dashboard with key performance indicators
 
 ### Technical Highlights
+
 - **State Machine Enforcement**: Explicit transition rules prevent invalid status changes
-- **Transactional Guarantees**: Multi-step operations use Prisma transactions
+- **Transactional Guarantees**: Multi-step operations use database transactions
 - **Domain-Driven Design**: Clear separation of concerns (domain, services, routes)
 - **Input Validation**: Zod schemas on all endpoints
 - **Deterministic Pricing**: Pure functions for calculations
 - **JWT Authentication**: Secure, stateless authentication
 - **Structured Error Handling**: Domain errors mapped to HTTP status codes
-- **Performance Indexes**: Optimized queries for subscriptions, invoices, audit logs
-- **Request Logging**: Pino for structured JSON logging
+- **Performance Indexes**: Optimized database queries
+- **Comprehensive Audit Trail**: All state changes logged with user, timestamp, and details
+- **Type Safety**: Full TypeScript coverage across frontend and backend
 
-## 📋 Prerequisites
+## 🏗️ Architecture
+
+### Tech Stack
+
+**Backend:**
+- **Runtime**: Node.js 20+
+- **Framework**: Fastify 4.x
+- **Language**: TypeScript 5.x
+- **ORM**: Prisma 5.x
+- **Database**: PostgreSQL 14+
+- **Authentication**: JWT with bcrypt
+- **Validation**: Zod
+- **Logging**: Pino
+
+**Frontend:**
+- **Framework**: React 18.x
+- **Language**: TypeScript 5.x
+- **Build Tool**: Vite 5.x
+- **UI Library**: Chakra UI 2.x
+- **Routing**: React Router 6.x
+- **State Management**: Zustand
+- **Data Fetching**: TanStack Query (React Query)
+- **Forms**: React Hook Form
+- **Styling**: Tailwind CSS
+- **Icons**: Lucide React
+
+### Project Structure
+
+```
+subs_manager/
+├── src/
+│   ├── client/                 # Frontend React application
+│   │   ├── components/         # Reusable UI components
+│   │   ├── pages/              # Page components
+│   │   │   ├── portal/         # Customer portal pages
+│   │   │   ├── products/       # Product management pages
+│   │   │   ├── subscriptions/  # Subscription management pages
+│   │   │   └── invoices/       # Invoice management pages
+│   │   ├── lib/                # Utilities and API client
+│   │   ├── store/              # Zustand state stores
+│   │   └── App.tsx             # Main app component with routing
+│   │
+│   └── server/                 # Backend Fastify application
+│       ├── config/             # Configuration management
+│       ├── domain/             # Domain layer (business logic)
+│       │   ├── errors.ts       # Domain error classes
+│       │   ├── permissions.ts  # RBAC permission definitions
+│       │   ├── pricing.ts      # Pricing calculation helpers
+│       │   └── state-machines.ts # Status transition rules
+│       ├── plugins/            # Fastify plugins
+│       │   ├── prisma.ts       # Database connection
+│       │   ├── auth.ts         # JWT authentication
+│       │   └── error-handler.ts # Global error handling
+│       ├── routes/             # HTTP route handlers
+│       ├── services/           # Business logic layer
+│       ├── scripts/            # Utility scripts (seed, smoke tests)
+│       └── utils/              # Utility functions
+│
+├── prisma/
+│   ├── schema.prisma           # Database schema
+│   └── migrations/             # Database migrations
+│
+├── public/                     # Static assets
+├── uploads/                    # File uploads directory
+├── package.json
+├── vite.config.ts
+├── tsconfig.json
+└── docker-compose.yml          # Docker setup (optional)
+```
+
+## 🚀 Getting Started
+
+### Prerequisites
 
 - **Node.js**: >= 20.0.0
 - **PostgreSQL**: >= 14
-- **pnpm/npm/yarn**: Any modern package manager
+- **npm/pnpm/yarn**: Any modern package manager
 
-## 🚀 Quick Start
+### Installation
 
-### 1. Clone and Install
+1. **Clone the repository**
 
 ```bash
-# Install dependencies
-npm install
+git clone <repository-url>
+cd subs_manager
+```
 
-# Or with pnpm
+2. **Install dependencies**
+
+```bash
+npm install
+# or
 pnpm install
 ```
 
-### 2. Configure Environment
+3. **Configure environment**
 
 Create a `.env` file in the root directory:
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env` with your configuration:
 
 ```env
 # Server Configuration
@@ -59,7 +171,7 @@ NODE_ENV=development
 PORT=3000
 HOST=0.0.0.0
 
-# Database (update with your PostgreSQL credentials)
+# Database
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/subs_manager?schema=public"
 
 # JWT Configuration (change in production!)
@@ -68,9 +180,12 @@ JWT_EXPIRES_IN=7d
 
 # Logging
 LOG_LEVEL=info
+
+# CORS (optional)
+CORS_ORIGIN=http://localhost:5173
 ```
 
-### 3. Setup Database
+4. **Setup database**
 
 ```bash
 # Generate Prisma client
@@ -84,143 +199,136 @@ npm run seed
 ```
 
 **Seeded Users:**
-- Admin: `admin@example.com` / `admin123`
-- Internal: `internal@example.com` / `internal123`
-- Customer: `customer@example.com` / `portal123`
+- **Admin**: `admin@example.com` / `admin123`
+- **Internal**: `internal@example.com` / `internal123`
+- **Customer**: `customer@example.com` / `portal123`
 
-### 4. Start Development Server
+5. **Start development servers**
+
+In separate terminals:
 
 ```bash
+# Terminal 1: Start backend server
+npm run dev:backend
+
+# Terminal 2: Start frontend dev server
 npm run dev
 ```
 
-Server runs on `http://localhost:3000`
+- Backend API: `http://localhost:3000`
+- Frontend: `http://localhost:5173`
 
-### 5. Run Smoke Tests (Optional)
+The frontend is configured to proxy API requests to the backend automatically.
+
+### Running Smoke Tests
 
 ```bash
-# In another terminal, with server running
+# Make sure the backend server is running first
 npm run smoke
 ```
 
-## 📁 Project Structure
+This validates the complete workflow including authentication, subscriptions, invoices, payments, and RBAC.
 
-```
-src/
-├── config/              # Configuration management
-├── domain/              # Domain layer (pure business logic)
-│   ├── errors.ts        # Domain error classes
-│   ├── permissions.ts   # RBAC permission definitions
-│   ├── pricing.ts       # Pricing calculation helpers
-│   └── state-machines.ts # Status transition rules
-├── plugins/             # Fastify plugins
-│   ├── prisma.ts        # Database connection
-│   ├── auth.ts          # JWT authentication
-│   └── error-handler.ts # Global error handling
-├── routes/              # HTTP route handlers
-│   ├── auth.routes.ts
-│   ├── subscriptions.routes.ts
-│   ├── invoices.routes.ts
-│   └── ...
-├── services/            # Business logic layer
-│   ├── subscription.service.ts
-│   ├── invoice.service.ts
-│   ├── payment.service.ts
-│   ├── audit.service.ts
-│   └── ...
-├── scripts/             # Utility scripts
-│   ├── seed.ts          # Database seeding
-│   └── smoke.ts         # Smoke tests
-├── utils/               # Utility functions
-│   ├── generators.ts    # ID generators
-│   ├── logger.ts        # Logging setup
-│   └── password.ts      # Password hashing
-└── index.ts             # Application entry point
+## 📖 Usage
 
-prisma/
-├── schema.prisma        # Database schema
-└── migrations/          # Migration files
-```
+### User Roles
 
-## 🔑 API Overview
+#### ADMIN
+- Full system access
+- User management
+- Product catalog management
+- Subscription and invoice management
+- Configuration and reporting
+
+#### INTERNAL
+- Subscription and invoice management
+- User and contact viewing
+- Reporting access
+- Cannot manage products or users
+
+#### PORTAL (Customer)
+- View own subscriptions and invoices
+- Browse and purchase products
+- Manage account and profile
+- View order history
+
+### Key Workflows
+
+#### Creating a Subscription
+
+1. Navigate to Subscriptions page (Admin/Internal)
+2. Click "Create Subscription"
+3. Select customer, plan, and add line items
+4. Set payment terms and method
+5. Transition through states: DRAFT → QUOTATION → CONFIRMED → ACTIVE
+
+#### Generating Invoices
+
+1. Navigate to a subscription
+2. Click "Generate Invoice"
+3. Select billing period
+4. System automatically calculates totals with taxes and discounts
+5. Invoice is idempotent (safe to generate multiple times)
+
+#### Customer Shopping Flow
+
+1. Customer logs into portal
+2. Browses products in shop
+3. Adds items to cart
+4. Proceeds to checkout
+5. Enters shipping address
+6. Selects payment method
+7. Completes order (creates subscription)
+
+## 🔌 API Documentation
 
 ### Base URL
+
 ```
 http://localhost:3000/api/v1
 ```
 
 ### Authentication
 
-All endpoints (except `/auth/signup` and `/auth/login`) require a JWT token in the `Authorization` header:
+All endpoints (except `/auth/signup` and `/auth/login`) require a JWT token:
 
 ```
 Authorization: Bearer <token>
 ```
 
-### Endpoints
+### Key Endpoints
 
 #### Authentication
 - `POST /auth/signup` - Register new user (PORTAL role)
 - `POST /auth/login` - Login and receive JWT token
 - `GET /auth/me` - Get current user profile
 
-#### Admin
-- `POST /admin/users` - Create user (ADMIN only)
-- `GET /admin/users` - List users
-- `GET /admin/users/:id` - Get user details
-
-#### Products
-- `POST /products` - Create product
-- `GET /products` - List products
-- `GET /products/:id` - Get product details
-- `PATCH /products/:id` - Update product
-- `POST /products/:id/variants` - Create variant
-- `GET /products/:id/variants` - List variants
-
-#### Plans
-- `POST /plans` - Create recurring plan
-- `GET /plans` - List plans
-- `GET /plans/:id` - Get plan details
-- `PATCH /plans/:id` - Update plan
-
 #### Subscriptions
 - `POST /subscriptions` - Create subscription
 - `GET /subscriptions` - List subscriptions (filtered by role)
 - `GET /subscriptions/:id` - Get subscription details
-- `POST /subscriptions/:id/lines` - Add line item
 - `POST /subscriptions/:id/actions/quote` - Transition to QUOTATION
 - `POST /subscriptions/:id/actions/confirm` - Transition to CONFIRMED
 - `POST /subscriptions/:id/actions/activate` - Transition to ACTIVE
-- `POST /subscriptions/:id/actions/close` - Transition to CLOSED
-- `POST /subscriptions/:id/invoices/generate?periodStart=<ISO>` - Generate invoice (idempotent)
+- `POST /subscriptions/:id/invoices/generate?periodStart=<ISO>` - Generate invoice
 
 #### Invoices
 - `GET /invoices` - List invoices
 - `GET /invoices/:id` - Get invoice details
 - `POST /invoices/:id/actions/confirm` - Confirm invoice
-- `POST /invoices/:id/actions/cancel` - Cancel invoice
 - `POST /invoices/:id/payments` - Record payment
-- `GET /invoices/:id/payments` - List payments for invoice
 
-#### Taxes & Discounts
-- `POST /taxes` - Create tax rate (ADMIN)
-- `GET /taxes` - List tax rates
-- `GET /taxes/:id` - Get tax rate
-- `PATCH /taxes/:id` - Update tax rate
-- `DELETE /taxes/:id` - Deactivate tax rate
-- `POST /discounts` - Create discount (ADMIN)
-- `GET /discounts` - List discounts
-- `GET /discounts/:id` - Get discount
-- `PATCH /discounts/:id` - Update discount
-- `DELETE /discounts/:id` - Deactivate discount
+#### Products
+- `POST /products` - Create product (ADMIN)
+- `GET /products` - List products
+- `GET /products/:id` - Get product details
+- `POST /products/:id/variants` - Create variant
 
-#### Reports
-- `GET /reports/summary?from=<ISO>&to=<ISO>` - Summary report
-- `GET /reports/subscriptions/metrics` - Subscription metrics
+For complete API documentation, see `API_EXAMPLES.md` or run the smoke tests to see example requests.
 
-## 🎨 Design Highlights
+## 🎨 Design Patterns
 
-### 1. State Machine Enforcement
+### State Machine Enforcement
 
 Subscriptions and invoices follow strict state transition rules:
 
@@ -238,19 +346,14 @@ DRAFT → CONFIRMED → PAID
 
 Invalid transitions throw `InvalidTransitionError` (HTTP 409).
 
-### 2. Idempotent Invoice Generation
+### Idempotent Invoice Generation
 
-```typescript
-// Critical constraint in Prisma schema
-@@unique([subscriptionId, periodStart])
-```
-
-Calling `POST /subscriptions/:id/invoices/generate?periodStart=2026-02-01T00:00:00Z` multiple times:
+Invoices are uniquely constrained by `(subscriptionId, periodStart)`, ensuring:
 - First call: Creates invoice with lines, calculates totals, logs audit
 - Subsequent calls: Returns existing invoice immediately
 - Guaranteed by database unique constraint + transaction
 
-### 3. Transactional Guarantees
+### Transactional Guarantees
 
 All multi-step operations use Prisma `$transaction`:
 
@@ -263,7 +366,7 @@ await prisma.$transaction(async (tx) => {
 });
 ```
 
-### 4. Audit Trail
+### Audit Trail
 
 Every state change and critical action is logged:
 
@@ -279,21 +382,9 @@ Every state change and critical action is logged:
 }
 ```
 
-Indexed on `(entityType, entityId, createdAt)` for fast retrieval.
+### Pricing Calculation
 
-### 5. Performance Indexes
-
-```prisma
-@@index([status, updatedAt])        // Subscription queries
-@@index([status, createdAt])        // Invoice queries
-@@index([entityType, entityId, createdAt])  // Audit log queries
-@@index([nextBillingDate])          // Billing automation
-@@index([dueDate])                  // Overdue invoice detection
-```
-
-### 6. Deterministic Pricing
-
-Order of calculation:
+Deterministic order of calculation:
 1. **Subtotal** = quantity × unitPrice
 2. **Discount** = PERCENTAGE ? subtotal × rate : fixedAmount
 3. **Taxable Amount** = subtotal - discount
@@ -302,38 +393,21 @@ Order of calculation:
 
 All calculations use `Math.round(value * 100) / 100` for consistent 2-decimal rounding.
 
-### 7. Role-Based Access Control
-
-| Permission | ADMIN | INTERNAL | PORTAL |
-|------------|-------|----------|--------|
-| Create users | ✅ | ❌ | ❌ |
-| Manage products | ✅ | ❌ | ❌ |
-| Create subscriptions | ✅ | ✅ | ❌ |
-| View all subscriptions | ✅ | ✅ | ❌ |
-| View own subscriptions | ✅ | ✅ | ✅ |
-| Manage invoices | ✅ | ✅ | ❌ |
-| View own invoices | ✅ | ✅ | ✅ |
-| Record payments | ✅ | ✅ | ❌ |
-| View reports | ✅ | ✅ | ❌ |
-
-PORTAL users can only access their own subscriptions and invoices.
-
 ## 🧪 Testing
 
-### Smoke Test
+### Smoke Tests
 
-The smoke test validates the complete workflow:
-
-1. ✅ Health check
-2. ✅ User authentication (Admin, Internal, Portal)
-3. ✅ List products
-4. ✅ Subscription state transitions (DRAFT → QUOTATION → CONFIRMED → ACTIVE)
-5. ✅ Idempotent invoice generation
-6. ✅ Invoice confirmation
-7. ✅ Payment recording
-8. ✅ Automatic PAID status
-9. ✅ Reports generation
-10. ✅ RBAC enforcement
+The smoke test suite validates:
+- ✅ Health check
+- ✅ User authentication (Admin, Internal, Portal)
+- ✅ Product listing
+- ✅ Subscription state transitions
+- ✅ Idempotent invoice generation
+- ✅ Invoice confirmation
+- ✅ Payment recording
+- ✅ Automatic PAID status
+- ✅ Reports generation
+- ✅ RBAC enforcement
 
 Run with:
 ```bash
@@ -344,14 +418,17 @@ npm run smoke
 
 ### Key Models
 
-- **User**: Authentication and authorization
-- **Product / ProductVariant**: Product catalog
+- **User**: Authentication and authorization with roles
+- **Contact**: Customer contact information
+- **Product / ProductVariant**: Product catalog with variants
 - **RecurringPlan**: Billing period configuration
 - **Subscription / SubscriptionLine**: Customer subscriptions
+- **SubscriptionTemplate**: Pre-configured subscription templates
 - **Invoice / InvoiceLine**: Generated invoices
 - **Payment**: Payment records
 - **TaxRate / Discount**: Pricing modifiers
 - **AuditLog**: Complete audit trail
+- **DiscountUsage**: Discount usage tracking
 
 ### Critical Constraints
 
@@ -363,14 +440,22 @@ npm run smoke
 @@unique on email, subscriptionNumber, invoiceNumber, sku
 ```
 
-## 🔒 Security Considerations
+## 🔒 Security
 
 1. **Password Hashing**: bcrypt with 10 salt rounds
 2. **JWT Secrets**: Must be changed in production
 3. **Input Validation**: Zod schemas on all endpoints
 4. **SQL Injection**: Prevented by Prisma ORM
-5. **Rate Limiting**: Not included (add `@fastify/rate-limit` for production)
-6. **CORS**: Configured, adjust `CORS_ORIGIN` for production
+5. **CORS**: Configured, adjust `CORS_ORIGIN` for production
+6. **Role-Based Access**: Enforced at route and service levels
+
+**Production Recommendations:**
+- Add rate limiting (`@fastify/rate-limit`)
+- Implement request/response logging middleware
+- Set up monitoring (Prometheus, DataDog, etc.)
+- Configure proper CORS policies
+- Use environment-specific JWT secrets
+- Enable HTTPS
 
 ## 🚀 Production Deployment
 
@@ -383,37 +468,32 @@ NODE_ENV=production
 DATABASE_URL=postgresql://...
 JWT_SECRET=<strong-random-secret>
 LOG_LEVEL=warn
+CORS_ORIGIN=https://yourdomain.com
 ```
 
 ### Build and Run
 
 ```bash
-# Build TypeScript
+# Build frontend
 npm run build
 
+# Build backend TypeScript
+npm run backend:build
+
 # Run migrations
-npm run prisma:migrate:deploy
+npx prisma migrate deploy
 
 # Start production server
-npm start
+npm run backend:start
 ```
 
 ### Docker (Optional)
 
-Create `Dockerfile`:
+A `docker-compose.yml` file is included for containerized deployment. Adjust database credentials and environment variables as needed.
 
-```dockerfile
-FROM node:20-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production
-COPY prisma ./prisma
-RUN npx prisma generate
-COPY dist ./dist
-CMD ["node", "dist/index.js"]
-```
+## 📈 Performance
 
-## 📈 Performance Characteristics
+Measured on moderate hardware with PostgreSQL:
 
 - **Subscription Creation**: < 50ms (single transaction)
 - **Invoice Generation**: < 100ms (includes lines, totals, audit)
@@ -421,28 +501,25 @@ CMD ["node", "dist/index.js"]
 - **List Endpoints**: < 200ms with pagination (indexed queries)
 - **Reports**: < 500ms (aggregation queries)
 
-All times measured on moderate hardware with PostgreSQL.
-
 ## 🛠️ Development Tools
 
 ```bash
-# Watch mode (auto-reload)
-npm run dev
+# Development
+npm run dev              # Start frontend dev server
+npm run dev:backend      # Start backend in watch mode
 
-# Build TypeScript
-npm run build
+# Database
+npm run prisma:generate  # Generate Prisma client
+npm run prisma:migrate   # Run migrations
+npm run prisma:studio    # Open Prisma Studio (GUI)
+npm run seed             # Seed database
 
-# Run migrations
-npm run prisma:migrate
+# Building
+npm run build            # Build frontend
+npm run backend:build    # Build backend
 
-# Open Prisma Studio (GUI)
-npm run prisma:studio
-
-# Seed database
-npm run seed
-
-# Run smoke tests
-npm run smoke
+# Testing
+npm run smoke            # Run smoke tests
 ```
 
 ## 📝 API Response Format
@@ -468,27 +545,30 @@ npm run smoke
 
 ### Error Codes
 
-- `VALIDATION_ERROR` (400)
-- `UNAUTHORIZED` (401)
-- `FORBIDDEN` (403)
-- `NOT_FOUND` (404)
-- `CONFLICT` / `INVALID_TRANSITION` (409)
-- `BUSINESS_RULE_VIOLATION` / `INSUFFICIENT_PAYMENT` (422)
-- `INTERNAL_ERROR` (500)
+- `VALIDATION_ERROR` (400) - Invalid input
+- `UNAUTHORIZED` (401) - Missing or invalid token
+- `FORBIDDEN` (403) - Insufficient permissions
+- `NOT_FOUND` (404) - Resource not found
+- `CONFLICT` / `INVALID_TRANSITION` (409) - State conflict
+- `BUSINESS_RULE_VIOLATION` / `INSUFFICIENT_PAYMENT` (422) - Business rule violation
+- `INTERNAL_ERROR` (500) - Server error
 
 ## 🤝 Contributing
 
-This is a hackathon scaffold. For production use:
+This is a production-ready scaffold. For production use, consider:
 
 1. Add unit tests (Jest or Vitest)
 2. Add integration tests
 3. Implement rate limiting
 4. Add request/response logging middleware
-5. Set up monitoring (Prometheus, DataDog, etc.)
+5. Set up monitoring and alerting
 6. Configure proper CORS policies
 7. Add API documentation (Swagger/OpenAPI)
 8. Implement soft deletes if required
 9. Add background job processing (BullMQ) for billing automation
+10. Add email notifications
+11. Implement file upload validation and virus scanning
+12. Add comprehensive error tracking (Sentry, etc.)
 
 ## 📄 License
 
@@ -499,10 +579,14 @@ MIT
 Built with:
 - [Fastify](https://fastify.io/) - Fast web framework
 - [Prisma](https://www.prisma.io/) - Type-safe ORM
+- [React](https://react.dev/) - UI library
+- [Chakra UI](https://chakra-ui.com/) - Component library
+- [Vite](https://vitejs.dev/) - Build tool
 - [Zod](https://zod.dev/) - Schema validation
+- [TanStack Query](https://tanstack.com/query) - Data fetching
+- [Zustand](https://zustand-demo.pmnd.rs/) - State management
 - [Pino](https://getpino.io/) - Fast logging
-- [bcrypt](https://github.com/kelektiv/node.bcrypt.js) - Password hashing
 
 ---
 
-**Built by Odoo Backend Team for a 24-hour hackathon** 🚀
+**Built for production-grade subscription management** 🚀

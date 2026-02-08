@@ -562,16 +562,15 @@ export default function InvoiceDetailPage() {
                           </Td>
                           <Td isNumeric>{line.quantity}</Td>
                           <Td isNumeric>
-                            ${parseFloat(line.unitPrice).toFixed(2)}
+                            ₹{parseFloat(line.unitPrice).toFixed(2)}
                           </Td>
                           <Td isNumeric>
                             {parseFloat(line.taxAmount) > 0
-                              ? `$${parseFloat(line.taxAmount).toFixed(2)}`
+                              ? `₹${parseFloat(line.taxAmount).toFixed(2)}`
                               : '-'}
                           </Td>
                           <Td isNumeric className="font-semibold">
-                            $
-                            {parseFloat(line.lineTotal).toFixed(2)}
+                            ₹{parseFloat(line.lineTotal).toFixed(2)}
                           </Td>
                         </Tr>
                       ))}
@@ -585,7 +584,7 @@ export default function InvoiceDetailPage() {
                         Subtotal
                       </span>
                       <span className="font-medium w-24 text-right">
-                        ${parseFloat(invoice.subtotal).toFixed(2)}
+                        ₹{parseFloat(invoice.subtotal).toFixed(2)}
                       </span>
                     </Flex>
                     {parseFloat(invoice.discountAmount) > 0 && (
@@ -594,10 +593,7 @@ export default function InvoiceDetailPage() {
                           Discount
                         </span>
                         <span className="font-medium text-green-600 w-24 text-right">
-                          -$
-                          {parseFloat(
-                            invoice.discountAmount
-                          ).toFixed(2)}
+                          -₹{parseFloat(invoice.discountAmount).toFixed(2)}
                         </span>
                       </Flex>
                     )}
@@ -607,8 +603,7 @@ export default function InvoiceDetailPage() {
                           Tax
                         </span>
                         <span className="font-medium w-24 text-right">
-                          $
-                          {parseFloat(invoice.taxAmount).toFixed(2)}
+                          ₹{parseFloat(invoice.taxAmount).toFixed(2)}
                         </span>
                       </Flex>
                     )}
@@ -619,7 +614,7 @@ export default function InvoiceDetailPage() {
                     >
                       <span className="text-lg font-bold">Total</span>
                       <span className="text-lg font-bold text-primary w-24 text-right">
-                        ${total.toFixed(2)}
+                        ₹{total.toFixed(2)}
                       </span>
                     </Flex>
                   </Box>
@@ -652,7 +647,7 @@ export default function InvoiceDetailPage() {
                       Paid Amount
                     </Label>
                     <p className="text-2xl font-bold text-green-600">
-                      ${paidAmount.toFixed(2)}
+                      ₹{paidAmount.toFixed(2)}
                     </p>
                   </div>
                   <div>
@@ -666,7 +661,7 @@ export default function InvoiceDetailPage() {
                           : 'text-green-600'
                       }`}
                     >
-                      ${balanceDue.toFixed(2)}
+                      ₹{balanceDue.toFixed(2)}
                     </p>
                   </div>
                 </VStack>
@@ -750,7 +745,7 @@ export default function InvoiceDetailPage() {
                     )}
                   </Box>
                   <p className="font-semibold text-green-600">
-                    ${parseFloat(payment.amount).toFixed(2)}
+                    ₹{parseFloat(payment.amount).toFixed(2)}
                   </p>
                 </Flex>
               ))}

@@ -315,7 +315,7 @@ export default function HomePage() {
                           {invoice.status}
                         </Badge>
                         <ChakraText fontSize="sm" fontWeight="semibold">
-                          ${parseFloat(invoice.total).toFixed(2)}
+                          ₹{parseFloat(invoice.total).toFixed(2)}
                         </ChakraText>
                       </VStack>
                     </Flex>

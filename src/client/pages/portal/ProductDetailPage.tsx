@@ -268,7 +268,7 @@ export default function ProductDetailPage() {
                   >
                     {variants.map((variant) => (
                       <option key={variant.id} value={variant.id}>
-                        {variant.name} - ${parseFloat(variant.basePrice).toFixed(2)}/month
+                        {variant.name} - ₹{parseFloat(variant.basePrice).toFixed(2)}/month
                       </option>
                     ))}
                   </Select>
@@ -302,8 +302,8 @@ export default function ProductDetailPage() {
                         {pricingTable.map((option) => (
                           <Tr key={option.plan.id}>
                             <Td fontWeight="semibold">{option.plan.name}</Td>
-                            <Td isNumeric>${option.totalPrice.toFixed(2)}</Td>
-                            <Td isNumeric>${option.monthlyPrice.toFixed(2)}/month</Td>
+                            <Td isNumeric>₹{option.totalPrice.toFixed(2)}</Td>
+                            <Td isNumeric>₹{option.monthlyPrice.toFixed(2)}/month</Td>
                             <Td>
                               {option.discount > 0 ? (
                                 <Badge colorScheme="green">{option.discount}%</Badge>

@@ -75,7 +75,7 @@ export default function SubscriptionsPage() {
       accessor: (row) => calculateRecurringAmount(row),
       cell: (value) => (
         <span className="text-sm font-semibold">
-          {value > 0 ? `$${Number(value).toFixed(0)}` : '-'}
+          {value > 0 ? `₹${Number(value).toFixed(0)}` : '-'}
         </span>
       ),
     },

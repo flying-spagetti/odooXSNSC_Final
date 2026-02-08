@@ -68,12 +68,12 @@ export default function InvoicesPage() {
     {
       header: 'Amount',
       accessor: 'total',
-      cell: (value) => <span className="font-semibold">${parseFloat(value).toFixed(2)}</span>,
+      cell: (value) => <span className="font-semibold">₹{parseFloat(value).toFixed(2)}</span>,
     },
     {
       header: 'Paid',
       accessor: 'paidAmount',
-      cell: (value) => <span className="text-sm">${parseFloat(value).toFixed(2)}</span>,
+      cell: (value) => <span className="text-sm">₹{parseFloat(value).toFixed(2)}</span>,
     },
     {
       header: 'Due Date',

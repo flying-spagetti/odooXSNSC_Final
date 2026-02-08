@@ -526,7 +526,7 @@ export default function CreateSubscriptionPage() {
                     <option value="">Select a product...</option>
                     {allVariants.map((variant) => (
                       <option key={variant.id} value={variant.id}>
-                        {variant.productName} - {variant.name} (${parseFloat(variant.basePrice).toFixed(2)})
+                        {variant.productName} - {variant.name} (₹{parseFloat(variant.basePrice).toFixed(2)})
                       </option>
                     ))}
                   </select>
@@ -563,7 +563,7 @@ export default function CreateSubscriptionPage() {
                     <option value="">No discount</option>
                     {discounts.map((discount: any) => (
                       <option key={discount.id} value={discount.id}>
-                        {discount.name} ({discount.type === 'PERCENTAGE' ? `${parseFloat(discount.value).toFixed(0)}%` : `$${parseFloat(discount.value).toFixed(2)}`})
+                        {discount.name} ({discount.type === 'PERCENTAGE' ? `${parseFloat(discount.value).toFixed(0)}%` : `₹${parseFloat(discount.value).toFixed(2)}`})
                       </option>
                     ))}
                   </select>
@@ -613,12 +613,12 @@ export default function CreateSubscriptionPage() {
                             <span className="font-medium">{line.productName} - {line.variantName}</span>
                           </Td>
                           <Td isNumeric>{line.quantity}</Td>
-                          <Td isNumeric>${line.unitPrice.toFixed(2)}</Td>
+                          <Td isNumeric>₹{line.unitPrice.toFixed(2)}</Td>
                           <Td isNumeric>
                             {line.discountName
                               ? line.discountType === 'PERCENTAGE'
                                 ? `${line.discountValue?.toFixed(0)}%`
-                                : `$${line.discountValue?.toFixed(2)}`
+                                : `₹${line.discountValue?.toFixed(2)}`
                               : '-'}
                           </Td>
                           <Td isNumeric>
@@ -627,7 +627,7 @@ export default function CreateSubscriptionPage() {
                               : '-'}
                           </Td>
                           <Td isNumeric className="font-semibold">
-                            ${calculateLineTotal(line).toFixed(2)}
+                            ₹{calculateLineTotal(line).toFixed(2)}
                           </Td>
                           <Td>
                             <Button
@@ -645,7 +645,7 @@ export default function CreateSubscriptionPage() {
                   </Table>
                   <Flex justify="flex-end" className="p-4 border-t" gap={8}>
                     <span className="text-lg font-bold">Total</span>
-                    <span className="text-lg font-bold text-primary">${calculateTotal().toFixed(2)}</span>
+                    <span className="text-lg font-bold text-primary">₹{calculateTotal().toFixed(2)}</span>
                   </Flex>
                 </Box>
               ) : (

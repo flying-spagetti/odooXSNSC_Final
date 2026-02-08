@@ -198,12 +198,12 @@ export default function SubscriptionPreviewPage() {
                       )}
                     </Td>
                     <Td isNumeric className="py-3">{line.quantity}</Td>
-                    <Td isNumeric className="py-3">${parseFloat(line.unitPrice).toFixed(2)}</Td>
+                    <Td isNumeric className="py-3">₹{parseFloat(line.unitPrice).toFixed(2)}</Td>
                     <Td isNumeric className="py-3">
                       {line.discount
                         ? line.discount.type === 'PERCENTAGE'
                           ? `${parseFloat(line.discount.value).toFixed(0)}%`
-                          : `$${parseFloat(line.discount.value).toFixed(2)}`
+                          : `₹${parseFloat(line.discount.value).toFixed(2)}`
                         : '-'}
                     </Td>
                     <Td isNumeric className="py-3">
@@ -212,7 +212,7 @@ export default function SubscriptionPreviewPage() {
                         : '-'}
                     </Td>
                     <Td isNumeric className="py-3 font-semibold">
-                      ${calculateLineTotal(line).toFixed(2)}
+                      ₹{calculateLineTotal(line).toFixed(2)}
                     </Td>
                   </Tr>
                 ))}
@@ -226,24 +226,24 @@ export default function SubscriptionPreviewPage() {
           <Box className="w-72 space-y-2">
             <Flex justify="space-between">
               <span className="text-gray-600">Subtotal</span>
-              <span className="font-medium">${subtotal.toFixed(2)}</span>
+              <span className="font-medium">₹{subtotal.toFixed(2)}</span>
             </Flex>
             {totalDiscount > 0 && (
               <Flex justify="space-between">
                 <span className="text-gray-600">Discount</span>
-                <span className="font-medium text-green-600">-${totalDiscount.toFixed(2)}</span>
+                <span className="font-medium text-green-600">-₹{totalDiscount.toFixed(2)}</span>
               </Flex>
             )}
             {totalTax > 0 && (
               <Flex justify="space-between">
                 <span className="text-gray-600">Tax</span>
-                <span className="font-medium">${totalTax.toFixed(2)}</span>
+                <span className="font-medium">₹{totalTax.toFixed(2)}</span>
               </Flex>
             )}
             <Divider />
             <Flex justify="space-between" className="pt-1">
               <span className="text-lg font-bold text-gray-900">Total</span>
-              <span className="text-lg font-bold text-gray-900">${total.toFixed(2)}</span>
+              <span className="text-lg font-bold text-gray-900">₹{total.toFixed(2)}</span>
             </Flex>
           </Box>
         </Flex>
