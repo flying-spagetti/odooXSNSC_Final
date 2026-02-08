@@ -70,7 +70,7 @@ export default function Dashboard() {
                   You have {overdueInvoices.length} overdue invoice{overdueInvoices.length > 1 ? 's' : ''}
                 </p>
                 <p className="text-red-700 text-sm">
-                  Total overdue: ${overdueInvoices.reduce((sum, i) => sum + parseFloat(i.total), 0).toFixed(2)}
+                  Total overdue: ₹{overdueInvoices.reduce((sum, i) => sum + parseFloat(i.total), 0).toFixed(2)}
                 </p>
               </div>
               <Button variant="outline" size="sm" onClick={() => navigate('/invoices')}>
@@ -101,7 +101,7 @@ export default function Dashboard() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalRevenue.toFixed(2)}</div>
+            <div className="text-2xl font-bold">₹{totalRevenue.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground">From paid invoices</p>
           </CardContent>
         </Card>
@@ -185,7 +185,7 @@ export default function Dashboard() {
                   <div>
                     <p className="text-sm font-medium">{inv.invoiceNumber}</p>
                     <p className="text-xs text-muted-foreground">
-                      ${parseFloat(inv.total).toFixed(2)}
+                      ₹{parseFloat(inv.total).toFixed(2)}
                       {inv.status !== 'PAID' && inv.status !== 'CANCELED' && new Date(inv.dueDate) < new Date() && (
                         <span className="text-red-600 ml-2">• Overdue</span>
                       )}

@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Box, Flex, SimpleGrid, VStack, useToast } from '@chakra-ui/react';
-import { BarChart3, TrendingUp, AlertCircle, DollarSign, FileText, Activity, CreditCard, Calendar, RefreshCw } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Box, Flex, SimpleGrid } from '@chakra-ui/react';
+import { BarChart3, TrendingUp, AlertCircle, DollarSign, FileText, Activity, CreditCard, Calendar, RefreshCw, Sparkles, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,9 +10,10 @@ import { Input } from '@/components/ui/input';
 import { reportApi } from '@/lib/api';
 
 export default function ReportingPage() {
-  const toast = useToast();
+  const queryClient = useQueryClient();
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [aiSummaryEnabled, setAiSummaryEnabled] = useState(false);
 
   // Calculate default date range (last 30 days)
   const getDefaultDateRange = () => {
@@ -41,6 +42,19 @@ export default function ReportingPage() {
   const summary = summaryData?.data?.summary;
   const metrics = metricsData?.data?.metrics || [];
 
+  // AI Summary query - only enabled when user requests it
+  const { data: aiSummaryData, isLoading: aiSummaryLoading, error: aiSummaryError } = useQuery({
+    queryKey: ['reports', 'ai-summary', dateFrom, dateTo],
+    queryFn: () => reportApi.getAISummary({
+      from: dateFrom ? new Date(dateFrom).toISOString() : undefined,
+      to: dateTo ? new Date(dateTo).toISOString() : undefined,
+    }),
+    enabled: aiSummaryEnabled,
+    retry: 1,
+  });
+
+  const aiSummary = aiSummaryData?.data?.summary;
+
   const handleResetDates = () => {
     setDateFrom('');
     setDateTo('');
@@ -50,6 +64,11 @@ export default function ReportingPage() {
     const range = getDefaultDateRange();
     setDateFrom(range.from);
     setDateTo(range.to);
+  };
+
+  const handleGenerateAISummary = () => {
+    setAiSummaryEnabled(true);
+    queryClient.invalidateQueries({ queryKey: ['reports', 'ai-summary'] });
   };
 
   const statusColors: Record<string, string> = {
@@ -102,6 +121,122 @@ export default function ReportingPage() {
           Refresh
         </Button>
       </Flex>
+
+      {/* AI Summary Card */}
+      <Card className="border-2 border-purple-200 bg-gradient-to-br from-purple-50/50 to-blue-50/50">
+        <CardHeader>
+          <Flex justify="space-between" align="center">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-purple-600" />
+                AI-Powered Business Insights
+              </CardTitle>
+              <CardDescription>
+                Get intelligent analysis and recommendations based on your report data
+              </CardDescription>
+            </div>
+            {!aiSummaryEnabled && (
+              <Button
+                onClick={handleGenerateAISummary}
+                disabled={summaryLoading || metricsLoading}
+                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
+              >
+                <Sparkles className="h-4 w-4 mr-2" />
+                Generate AI Summary
+              </Button>
+            )}
+          </Flex>
+        </CardHeader>
+        <CardContent>
+          {aiSummaryLoading ? (
+            <div className="flex flex-col items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 text-purple-600 animate-spin mb-4" />
+              <p className="text-sm text-muted-foreground">Analyzing your business data...</p>
+              <p className="text-xs text-muted-foreground mt-2">This may take a few seconds</p>
+            </div>
+          ) : aiSummaryError ? (
+            <div className="text-center py-6">
+              <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-3" />
+              <p className="text-sm font-medium text-red-700 mb-2">Failed to generate AI summary</p>
+              <div className="text-xs text-muted-foreground mb-4 space-y-2">
+                <p>
+                  {(aiSummaryError as any)?.response?.data?.message || (aiSummaryError as any)?.message || 'An error occurred'}
+                </p>
+                {((aiSummaryError as any)?.response?.data?.message || (aiSummaryError as any)?.message || '').includes('OPENROUTER_API_KEY') && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 mt-3 text-left">
+                    <p className="font-medium text-yellow-800 mb-1">Configuration Required:</p>
+                    <p className="text-yellow-700 text-xs">
+                      Please set the <code className="bg-yellow-100 px-1 rounded">OPENROUTER_API_KEY</code> environment variable in your server's <code className="bg-yellow-100 px-1 rounded">.env</code> file.
+                    </p>
+                  </div>
+                )}
+                {((aiSummaryError as any)?.response?.data?.message || (aiSummaryError as any)?.message || '').includes('SUMMARIZATION_MODEL') && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 mt-3 text-left">
+                    <p className="font-medium text-yellow-800 mb-1">Configuration Required:</p>
+                    <p className="text-yellow-700 text-xs">
+                      Please set the <code className="bg-yellow-100 px-1 rounded">SUMMARIZATION_MODEL</code> environment variable (e.g., <code className="bg-yellow-100 px-1 rounded">openai/gpt-4o-mini</code>) in your server's <code className="bg-yellow-100 px-1 rounded">.env</code> file.
+                    </p>
+                  </div>
+                )}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleGenerateAISummary}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Try Again
+              </Button>
+            </div>
+          ) : aiSummary ? (
+            <div className="space-y-4">
+              <div className="prose prose-sm max-w-none">
+                <div className="bg-white/80 backdrop-blur-sm rounded-lg p-6 border border-purple-100 shadow-sm">
+                  <div className="whitespace-pre-wrap text-sm leading-relaxed text-gray-700">
+                    {aiSummary.split('\n').map((paragraph: string, idx: number) => (
+                      paragraph.trim() && (
+                        <p key={idx} className="mb-3 last:mb-0">
+                          {paragraph.trim()}
+                        </p>
+                      )
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <Flex justify="end" gap={2}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setAiSummaryEnabled(false);
+                    queryClient.removeQueries({ queryKey: ['reports', 'ai-summary'] });
+                  }}
+                >
+                  Clear
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleGenerateAISummary}
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Regenerate
+                </Button>
+              </Flex>
+            </div>
+          ) : (
+            <div className="text-center py-6">
+              <Sparkles className="h-12 w-12 text-purple-300 mx-auto mb-4" />
+              <p className="text-sm text-muted-foreground mb-2">
+                Click "Generate AI Summary" to get intelligent insights
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Our AI will analyze your subscription metrics, revenue, and invoice status to provide actionable recommendations
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Date Range Filter */}
       <Card>
@@ -172,7 +307,7 @@ export default function ReportingPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {summaryLoading ? '...' : `$${(summary?.totalRevenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              {summaryLoading ? '...' : `₹${(summary?.totalRevenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
             </div>
             <p className="text-xs text-muted-foreground">
               {dateFrom || dateTo ? 'In date range' : 'From paid invoices'}
@@ -187,7 +322,7 @@ export default function ReportingPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {summaryLoading ? '...' : `$${(summary?.totalPayments || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              {summaryLoading ? '...' : `₹${(summary?.totalPayments || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
             </div>
             <p className="text-xs text-muted-foreground">
               {dateFrom || dateTo ? 'In date range' : 'All recorded payments'}
@@ -325,21 +460,21 @@ export default function ReportingPage() {
             <div className="p-4 bg-green-50 rounded-lg">
               <p className="text-sm text-green-700 font-medium">Total Revenue</p>
               <p className="text-3xl font-bold text-green-800">
-                ${(summary?.totalRevenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ₹{(summary?.totalRevenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
               <p className="text-xs text-green-600">Sum of all paid invoices</p>
             </div>
             <div className="p-4 bg-blue-50 rounded-lg">
               <p className="text-sm text-blue-700 font-medium">Total Payments Collected</p>
               <p className="text-3xl font-bold text-blue-800">
-                ${(summary?.totalPayments || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ₹{(summary?.totalPayments || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
               <p className="text-xs text-blue-600">Sum of all payment records</p>
             </div>
             <div className="p-4 bg-orange-50 rounded-lg">
               <p className="text-sm text-orange-700 font-medium">Outstanding</p>
               <p className="text-3xl font-bold text-orange-800">
-                ${Math.max(0, (summary?.totalRevenue || 0) - (summary?.totalPayments || 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ₹{Math.max(0, (summary?.totalRevenue || 0) - (summary?.totalPayments || 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
               <p className="text-xs text-orange-600">Revenue minus payments</p>
             </div>

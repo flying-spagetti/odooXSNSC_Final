@@ -26,4 +26,8 @@ export const config = {
   billing: {
     defaultDueDays: 30,
   },
+  ai: {
+    openRouterApiKey: process.env.OPENROUTER_API_KEY || '',
+    summarizationModel: process.env.SUMMARIZATION_MODEL || '',
+  },
 };

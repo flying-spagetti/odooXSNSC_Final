@@ -639,7 +639,7 @@ export default function InvoiceDetailPage() {
                       Total Amount
                     </Label>
                     <p className="text-2xl font-bold">
-                      ${total.toFixed(2)}
+                      ₹{total.toFixed(2)}
                     </p>
                   </div>
                   <div>

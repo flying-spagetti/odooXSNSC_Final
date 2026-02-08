@@ -458,6 +458,9 @@ export const reportApi = {
 
   getSubscriptionMetrics: () =>
     api.get<{ metrics: { status: string; count: number }[] }>('/reports/subscriptions/metrics'),
+
+  getAISummary: (data?: { from?: string; to?: string }) =>
+    api.post<{ summary: string }>('/reports/ai-summary', data || {}),
 };
 
 export interface ReportSummary {

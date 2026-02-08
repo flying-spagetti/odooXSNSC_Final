@@ -407,7 +407,7 @@ export default function ProductDetailPage() {
                     onVariantClose();
                   }}
                 >
-                  {variant.name} - ${parseFloat(variant.basePrice).toFixed(2)}/month
+                  {variant.name} - ₹{parseFloat(variant.basePrice).toFixed(2)}/month
                 </Button>
               ))}
             </VStack>

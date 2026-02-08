@@ -686,7 +686,7 @@ export default function ConfigurationPage() {
                     <option value="">Select a product...</option>
                     {allVariants.map((v) => (
                       <option key={v.id} value={v.id}>
-                        {v.productName} - {v.name} (${parseFloat(v.basePrice).toFixed(2)})
+                        {v.productName} - {v.name} (₹{parseFloat(v.basePrice).toFixed(2)})
                       </option>
                     ))}
                   </select>
@@ -705,7 +705,7 @@ export default function ConfigurationPage() {
                     <option value="">No discount</option>
                     {discounts.filter((d: any) => d.isActive).map((d: any) => (
                       <option key={d.id} value={d.id}>
-                        {d.name} ({d.type === 'PERCENTAGE' ? `${parseFloat(d.value).toFixed(0)}%` : `$${parseFloat(d.value).toFixed(2)}`})
+                        {d.name} ({d.type === 'PERCENTAGE' ? `${parseFloat(d.value).toFixed(0)}%` : `₹${parseFloat(d.value).toFixed(2)}`})
                       </option>
                     ))}
                   </select>
@@ -747,7 +747,7 @@ export default function ConfigurationPage() {
                           <Tr key={idx}>
                             <Td className="text-sm">{variant ? `${variant.productName} - ${variant.name}` : line.variantId}</Td>
                             <Td isNumeric className="text-sm">{line.quantity}</Td>
-                            <Td isNumeric className="text-sm">${line.unitPrice.toFixed(2)}</Td>
+                            <Td isNumeric className="text-sm">₹{line.unitPrice.toFixed(2)}</Td>
                             <Td>
                               <Button type="button" size="sm" variant="ghost" className="text-red-500" onClick={() => handleRemoveTplLine(idx)}>
                                 <Trash2 className="h-3 w-3" />

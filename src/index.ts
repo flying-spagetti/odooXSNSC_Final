@@ -3,6 +3,9 @@
  * Fastify server bootstrap with all plugins and routes
  */
 
+// Load environment variables from .env file
+import 'dotenv/config';
+
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { config } from './config';

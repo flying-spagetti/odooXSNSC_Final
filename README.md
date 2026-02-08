@@ -183,6 +183,13 @@ LOG_LEVEL=info
 
 # CORS (optional)
 CORS_ORIGIN=http://localhost:5173
+
+# AI Features (OpenRouter)
+# Get your API key from https://openrouter.ai
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+# Model options: openai/gpt-4o-mini, openai/gpt-4o, anthropic/claude-3-haiku, etc.
+# See https://openrouter.ai/models for full list
+SUMMARIZATION_MODEL=openai/gpt-4o-mini
 ```
 
 4. **Setup database**
@@ -469,6 +476,10 @@ DATABASE_URL=postgresql://...
 JWT_SECRET=<strong-random-secret>
 LOG_LEVEL=warn
 CORS_ORIGIN=https://yourdomain.com
+
+# AI Features (OpenRouter)
+OPENROUTER_API_KEY=your_openrouter_api_key
+SUMMARIZATION_MODEL=openai/gpt-4o-mini
 ```
 
 ### Build and Run
