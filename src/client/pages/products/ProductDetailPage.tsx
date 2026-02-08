@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Box, Flex, SimpleGrid, useDisclosure, useToast } from '@chakra-ui/react';
-import { ArrowLeft, Plus, Edit2, Trash2 } from 'lucide-react';
+import { Box, Flex, SimpleGrid, useDisclosure, useToast, Image, Text as ChakraText } from '@chakra-ui/react';
+import { ArrowLeft, Plus, Edit2, Trash2, List, LayoutGrid } from 'lucide-react';
 import { productApi, ProductVariant } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import { FormDialog } from '@/components/FormDialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { VariantForm } from './components/VariantForm';
 import { ProductForm } from './components/ProductForm';
+import { DEFAULT_PRODUCT_IMAGE } from '@/lib/utils';
 
 export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -23,6 +24,7 @@ export default function ProductDetailPage() {
   const { isOpen: isVariantOpen, onOpen: onVariantOpen, onClose: onVariantClose } = useDisclosure();
   const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
+  const [variantViewMode, setVariantViewMode] = useState<'list' | 'kanban'>('list');
 
   const { data: productData, isLoading } = useQuery({
     queryKey: ['product', id],
@@ -262,15 +264,125 @@ export default function ProductDetailPage() {
               <CardTitle>Product Variants</CardTitle>
               <CardDescription>Manage pricing variants for this product</CardDescription>
             </div>
-            <Button onClick={() => { setSelectedVariant(null); onVariantOpen(); }}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Variant
-            </Button>
+            <Flex gap={2} align="center">
+              {variants.length > 0 && (
+                <Flex gap={1} className="border rounded-md p-1">
+                  <Button
+                    variant={variantViewMode === 'list' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setVariantViewMode('list')}
+                    className="h-8"
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={variantViewMode === 'kanban' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setVariantViewMode('kanban')}
+                    className="h-8"
+                  >
+                    <LayoutGrid className="h-4 w-4" />
+                  </Button>
+                </Flex>
+              )}
+              <Button onClick={() => { setSelectedVariant(null); onVariantOpen(); }}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Variant
+              </Button>
+            </Flex>
           </Flex>
         </CardHeader>
         <CardContent>
           {variants.length > 0 ? (
-            <DataTable columns={variantColumns} data={variants} />
+            variantViewMode === 'list' ? (
+              <DataTable columns={variantColumns} data={variants} />
+            ) : (
+              <SimpleGrid columns={{ base: 1, sm: 2, md: 3, lg: 4 }} spacing={4}>
+                {variants.map((variant) => (
+                  <Card
+                    key={variant.id}
+                    className="border border-gray-200 hover:shadow-lg transition-all duration-200 overflow-hidden group"
+                  >
+                    <Box
+                      height="150px"
+                      overflow="hidden"
+                      position="relative"
+                      className="bg-gray-100"
+                    >
+                      <Image
+                        src={variant.imageUrl || DEFAULT_PRODUCT_IMAGE}
+                        alt={variant.name}
+                        width="100%"
+                        height="150px"
+                        objectFit="cover"
+                        className="group-hover:scale-105 transition-transform duration-200"
+                      />
+                    </Box>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base font-semibold line-clamp-1">
+                        {variant.name}
+                      </CardTitle>
+                      <ChakraText fontSize="xs" color="gray.500" fontFamily="mono" mt={1}>
+                        {variant.sku}
+                      </ChakraText>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <Flex justify="space-between" align="center" mb={3}>
+                        <ChakraText fontSize="lg" fontWeight="bold" color="primary">
+                          ${parseFloat(variant.basePrice).toFixed(2)}
+                        </ChakraText>
+                        <Badge 
+                          variant={variant.isActive ? 'default' : 'secondary'}
+                          className={variant.isActive ? 'bg-green-100 text-green-700' : ''}
+                        >
+                          {variant.isActive ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </Flex>
+                      {variant.description && (
+                        <ChakraText 
+                          fontSize="sm" 
+                          color="gray.600" 
+                          noOfLines={2}
+                          mb={3}
+                          className="min-h-[2.5rem]"
+                        >
+                          {variant.description}
+                        </ChakraText>
+                      )}
+                      <Flex gap={2} className="pt-3 border-t border-gray-100">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedVariant(variant);
+                            onVariantOpen();
+                          }}
+                        >
+                          <Edit2 className="h-3 w-3 mr-1" />
+                          Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedVariant(variant);
+                            onDeleteOpen();
+                          }}
+                          disabled={!variant.isActive}
+                          className="flex-1"
+                        >
+                          <Trash2 className="h-3 w-3 mr-1" />
+                          Delete
+                        </Button>
+                      </Flex>
+                    </CardContent>
+                  </Card>
+                ))}
+              </SimpleGrid>
+            )
           ) : (
             <p className="text-center text-muted-foreground py-8">
               No variants yet. Create your first variant to get started.

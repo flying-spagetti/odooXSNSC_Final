@@ -9,18 +9,19 @@ import {
   Input,
   Select,
   SimpleGrid,
-  Card,
-  CardBody,
   Heading,
   Text,
   Button,
   Badge,
   useToast,
   Image,
+  Text as ChakraText,
 } from '@chakra-ui/react';
-import { Search, Filter } from 'lucide-react';
+import { Search, Filter, List, LayoutGrid } from 'lucide-react';
 import { productApi, Product, ProductVariant } from '@/lib/api';
-import { Card as UICard, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { DataTable, Column } from '@/components/DataTable';
+import { DEFAULT_PRODUCT_IMAGE } from '@/lib/utils';
 
 export default function ShopPage() {
   const navigate = useNavigate();
@@ -29,6 +30,7 @@ export default function ShopPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [priceRange, setPriceRange] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('name');
+  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('kanban');
 
   const { data, isLoading } = useQuery({
     queryKey: ['products', 'shop'],
@@ -85,21 +87,86 @@ export default function ShopPage() {
     );
   }
 
+  const productColumns: Column<Product>[] = [
+    {
+      header: 'Product',
+      accessor: 'name',
+      cell: (value, row) => (
+        <Flex align="center" gap={3}>
+          <Box width="50px" height="50px" borderRadius="md" overflow="hidden" className="bg-gray-100">
+            <Image
+              src={row.imageUrl || DEFAULT_PRODUCT_IMAGE}
+              alt={value}
+              width="50px"
+              height="50px"
+              objectFit="cover"
+            />
+          </Box>
+          <div>
+            <Text fontWeight="semibold">{value}</Text>
+            <Text fontSize="xs" color="gray.500" noOfLines={1}>
+              {row.description || 'No description'}
+            </Text>
+          </div>
+        </Flex>
+      ),
+    },
+    {
+      header: 'Description',
+      accessor: 'description',
+      cell: (value) => <ChakraText fontSize="sm" color="gray.600" noOfLines={2}>{value || '-'}</ChakraText>,
+    },
+    {
+      header: 'Variants',
+      accessor: (row) => row._count?.variants || 0,
+      cell: (value) => <Badge variant="secondary">{value} {value === 1 ? 'variant' : 'variants'}</Badge>,
+    },
+    {
+      header: 'Status',
+      accessor: 'isActive',
+      cell: (value) => (
+        <Badge variant={value ? 'default' : 'secondary'} className={value ? 'bg-green-100 text-green-700' : ''}>
+          {value ? 'Active' : 'Inactive'}
+        </Badge>
+      ),
+    },
+  ];
+
   return (
     <Box>
       <Flex justify="space-between" align="center" mb={6}>
         <Heading as="h1" size="xl">
           All Products
         </Heading>
-        <Select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value)}
-          width="200px"
-          size="sm"
-        >
-          <option value="name">Sort By Name</option>
-          <option value="price">Sort By Price</option>
-        </Select>
+        <Flex gap={2} align="center">
+          <Flex gap={1} className="border rounded-md p-1">
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('list')}
+              className="h-8"
+            >
+              <List className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'kanban' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('kanban')}
+              className="h-8"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+          </Flex>
+          <Select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            width="200px"
+            size="sm"
+          >
+            <option value="name">Sort By Name</option>
+            <option value="price">Sort By Price</option>
+          </Select>
+        </Flex>
       </Flex>
 
       <Flex gap={6}>
@@ -181,61 +248,82 @@ export default function ShopPage() {
             <option value="all">Product Type</option>
           </Select>
 
-          {/* Product Grid */}
+          {/* Product Display */}
           {filteredProducts.length === 0 ? (
             <Box textAlign="center" py={12}>
               <Text color="gray.500">No products found</Text>
             </Box>
+          ) : viewMode === 'list' ? (
+            <Card>
+              <CardContent className="p-0">
+                <DataTable
+                  columns={productColumns}
+                  data={filteredProducts}
+                  loading={isLoading}
+                  onRowClick={(row) => handleProductClick(row.id)}
+                />
+              </CardContent>
+            </Card>
           ) : (
             <SimpleGrid columns={{ base: 1, sm: 2, md: 3, lg: 4 }} spacing={6}>
               {filteredProducts.map((product) => (
                 <Card
                   key={product.id}
-                  cursor="pointer"
+                  className="cursor-pointer hover:shadow-xl transition-all duration-200 border border-gray-200 overflow-hidden group"
                   onClick={() => handleProductClick(product.id)}
-                  _hover={{ shadow: 'lg', transform: 'translateY(-2px)' }}
-                  transition="all 0.2s"
                 >
-                  <CardBody>
-                    <VStack align="stretch" spacing={3}>
-                      {product.imageUrl ? (
-                        <Box
-                          height="200px"
-                          borderRadius="md"
-                          overflow="hidden"
-                        >
-                          <Image
-                            src={product.imageUrl}
-                            alt={product.name}
-                            width="100%"
-                            height="200px"
-                            objectFit="cover"
-                          />
-                        </Box>
-                      ) : (
-                        <Box
-                          height="200px"
-                          bg="gray.100"
-                          borderRadius="md"
-                          display="flex"
-                          alignItems="center"
-                          justifyContent="center"
-                        >
-                          <Text color="gray.400">No Image</Text>
-                        </Box>
-                      )}
-                      <Heading size="sm">{product.name}</Heading>
-                      <Text fontSize="sm" color="gray.600" noOfLines={2}>
-                        {product.description || 'No description available'}
-                      </Text>
-                      <Text fontSize="lg" fontWeight="bold" color="primary">
-                        Price / Billing
-                      </Text>
-                      <Button size="sm" colorScheme="blue">
-                        View Details
-                      </Button>
-                    </VStack>
-                  </CardBody>
+                  <Box
+                    height="200px"
+                    overflow="hidden"
+                    position="relative"
+                    className="bg-gray-100"
+                  >
+                    <Image
+                      src={product.imageUrl || DEFAULT_PRODUCT_IMAGE}
+                      alt={product.name}
+                      width="100%"
+                      height="200px"
+                      objectFit="cover"
+                      className="group-hover:scale-105 transition-transform duration-200"
+                    />
+                  </Box>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg font-semibold line-clamp-1">
+                      {product.name}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <ChakraText 
+                      fontSize="sm" 
+                      color="gray.600" 
+                      noOfLines={2} 
+                      mb={4}
+                      className="min-h-[2.5rem]"
+                    >
+                      {product.description || 'No description available'}
+                    </ChakraText>
+                    <Flex justify="space-between" align="center" className="pt-3 border-t border-gray-100">
+                      <Badge variant="secondary" className="text-xs">
+                        {product._count?.variants || 0} {product._count?.variants === 1 ? 'variant' : 'variants'}
+                      </Badge>
+                      <Badge 
+                        variant={product.isActive ? 'default' : 'secondary'}
+                        className={product.isActive ? 'bg-green-100 text-green-700 hover:bg-green-100' : ''}
+                      >
+                        {product.isActive ? 'Active' : 'Inactive'}
+                      </Badge>
+                    </Flex>
+                    <Button 
+                      size="sm" 
+                      className="w-full mt-4"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleProductClick(product.id);
+                      }}
+                    >
+                      View Details
+                    </Button>
+                  </CardContent>
                 </Card>
               ))}
             </SimpleGrid>

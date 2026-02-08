@@ -189,24 +189,6 @@ export default function CartPage() {
     createSubscriptionMutation.mutate(items);
   };
 
-  const handleBravePanther = () => {
-    // Skip to order confirmation (for testing)
-    if (items.length === 0) {
-      toast({
-        title: 'Cart is empty',
-        status: 'warning',
-        duration: 3000,
-      });
-      return;
-    }
-    // Create subscription and navigate directly to confirmation
-    createSubscriptionMutation.mutate(items);
-    // This will be handled after subscription creation
-    setTimeout(() => {
-      navigate('/portal/checkout/confirmation');
-    }, 1000);
-  };
-
   // Calculate totals
   const subtotal = getTotalPrice();
   const discountAmount = appliedDiscount?.discountAmount || 0;
@@ -378,21 +360,6 @@ export default function CartPage() {
                     </Text>
                   )}
                 </VStack>
-              </Box>
-
-              {/* Brave Panther Button */}
-              <Box mt={4}>
-                <Button
-                  variant="outline"
-                  colorScheme="blue"
-                  rightIcon={<ArrowRight className="h-4 w-4" />}
-                  onClick={handleBravePanther}
-                >
-                  Brave Panther
-                </Button>
-                <Text fontSize="xs" color="gray.500" mt={1}>
-                  (extra price)
-                </Text>
               </Box>
             </CardContent>
           </Card>

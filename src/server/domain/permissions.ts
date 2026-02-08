@@ -11,6 +11,11 @@ export type Permission =
   | 'users:read'
   | 'users:update'
   | 'users:delete'
+  // Contact management
+  | 'contacts:create'
+  | 'contacts:read'
+  | 'contacts:update'
+  | 'contacts:delete'
   // Product management
   | 'products:create'
   | 'products:read'
@@ -67,6 +72,10 @@ export const RolePermissions: Record<Role, Permission[]> = {
     'users:read',
     'users:update',
     'users:delete',
+    'contacts:create',
+    'contacts:read',
+    'contacts:update',
+    'contacts:delete',
     'products:create',
     'products:read',
     'products:update',
@@ -107,6 +116,10 @@ export const RolePermissions: Record<Role, Permission[]> = {
   INTERNAL: [
     // Internal staff: can manage subscriptions, invoices, payments
     'users:read',
+    'contacts:create',
+    'contacts:read',
+    'contacts:update',
+    'contacts:delete',
     'products:read',
     'plans:read',
     'subscriptions:create',
@@ -128,6 +141,10 @@ export const RolePermissions: Record<Role, Permission[]> = {
   ],
   PORTAL: [
     // Portal users: can view their own subscriptions and invoices, and create subscriptions for themselves
+    'contacts:create',
+    'contacts:read',
+    'contacts:update',
+    'contacts:delete',
     'products:read',
     'plans:read',
     'subscriptions:create', // Allow portal users to create subscriptions (self-service checkout)
@@ -136,6 +153,7 @@ export const RolePermissions: Record<Role, Permission[]> = {
     'invoices:read',
     'payments:create', // Allow portal users to make payments
     'payments:read',
+    'discounts:read', // Allow portal users to validate discount codes during checkout
   ],
 };
 

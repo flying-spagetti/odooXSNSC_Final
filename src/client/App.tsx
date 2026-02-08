@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ChakraProvider } from '@chakra-ui/react';
 import { useAuthStore } from './store/authStore';
@@ -25,6 +25,8 @@ import InvoicesPage from './pages/invoices/InvoicesPage';
 import InvoiceDetailPage from './pages/invoices/InvoiceDetailPage';
 import ReportingPage from './pages/ReportingPage';
 import UsersContactsPage from './pages/UsersContactsPage';
+import UsersPage from './pages/UsersPage';
+import ContactsPage from './pages/ContactsPage';
 import ConfigurationPage from './pages/ConfigurationPage';
 import MyProfilePage from './pages/MyProfilePage';
 
@@ -192,13 +194,37 @@ function App() {
               }
             />
 
-            {/* Users / Contacts */}
+            {/* Users / Contacts - Legacy route */}
             <Route
               path="/users-contacts"
               element={
                 <ProtectedRoute>
                   <Layout>
                     <UsersContactsPage />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Users */}
+            <Route
+              path="/users"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <UsersPage />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Contacts */}
+            <Route
+              path="/contacts"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <ContactsPage />
                   </Layout>
                 </ProtectedRoute>
               }

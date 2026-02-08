@@ -28,6 +28,7 @@ import discountsRoutes from './routes/discounts.routes';
 import reportsRoutes from './routes/reports.routes';
 import templatesRoutes from './routes/templates.routes';
 import paymentsRoutes from './routes/payments.routes';
+import contactsRoutes from './routes/contacts.routes';
 
 async function buildServer() {
   const fastify = Fastify({
@@ -82,6 +83,7 @@ async function buildServer() {
   await fastify.register(reportsRoutes, { prefix: '/api/v1/reports' });
   await fastify.register(templatesRoutes, { prefix: '/api/v1/templates' });
   await fastify.register(paymentsRoutes, { prefix: '/api/v1/payments' });
+  await fastify.register(contactsRoutes, { prefix: '/api/v1/contacts' });
 
   return fastify;
 }

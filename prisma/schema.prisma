@@ -76,10 +76,32 @@ model User {
   salespersonSubscriptions Subscription[]  @relation("SalespersonSubscriptions")
   auditLogs                AuditLog[]
   discountUsages           DiscountUsage[]
+  contacts                 Contact[]
 
   @@index([email])
   @@index([role])
   @@index([resetToken])
+}
+
+// ============================================================================
+// CONTACTS
+// ============================================================================
+
+model Contact {
+  id        String   @id @default(cuid())
+  userId    String   // User who owns this contact
+  name      String
+  email     String
+  phone     String?
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscriptions Subscription[]
+
+  @@index([userId])
+  @@index([email])
 }
 
 // ============================================================================
@@ -148,6 +170,7 @@ model Subscription {
   id                 String             @id @default(cuid())
   subscriptionNumber String             @unique
   userId             String
+  contactId          String? // Contact associated with this subscription
   planId             String
   status             SubscriptionStatus @default(DRAFT)
   startDate          DateTime?
@@ -165,12 +188,14 @@ model Subscription {
   updatedAt          DateTime           @updatedAt
 
   user        User               @relation("UserSubscriptions", fields: [userId], references: [id], onDelete: Cascade)
+  contact     Contact?          @relation(fields: [contactId], references: [id], onDelete: SetNull)
   plan        RecurringPlan      @relation(fields: [planId], references: [id], onDelete: Restrict)
   salesperson User?              @relation("SalespersonSubscriptions", fields: [salespersonId], references: [id], onDelete: SetNull)
   lines       SubscriptionLine[]
   invoices    Invoice[]
 
   @@index([userId])
+  @@index([contactId])
   @@index([planId])
   @@index([status, updatedAt])
   @@index([nextBillingDate])

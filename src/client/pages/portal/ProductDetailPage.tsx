@@ -36,6 +36,7 @@ import { ArrowLeft, ShoppingCart } from 'lucide-react';
 import { productApi, planApi, ProductVariant, RecurringPlan } from '@/lib/api';
 import { useCartStore } from '@/store/cartStore';
 import { Card, CardContent } from '@/components/ui/card';
+import { DEFAULT_PRODUCT_IMAGE } from '@/lib/utils';
 
 interface PricingOption {
   plan: RecurringPlan;
@@ -226,34 +227,21 @@ export default function ProductDetailPage() {
         <Box flex={1}>
           <VStack spacing={4} align="stretch">
             {/* Product Images */}
-            {selectedVariant?.imageUrl || product.imageUrl ? (
-              <Box
+            <Box
+              width="100%"
+              height="500px"
+              borderRadius="md"
+              overflow="hidden"
+              className="bg-gray-100"
+            >
+              <Image
+                src={selectedVariant?.imageUrl || product.imageUrl || DEFAULT_PRODUCT_IMAGE}
+                alt={product.name}
                 width="100%"
                 height="500px"
-                borderRadius="md"
-                overflow="hidden"
-              >
-                <Image
-                  src={selectedVariant?.imageUrl || product.imageUrl}
-                  alt={product.name}
-                  width="100%"
-                  height="500px"
-                  objectFit="cover"
-                />
-              </Box>
-            ) : (
-              <Box
-                width="100%"
-                height="500px"
-                bg="gray.100"
-                borderRadius="md"
-                display="flex"
-                alignItems="center"
-                justifyContent="center"
-              >
-                <Text color="gray.400">No Image Available</Text>
-              </Box>
-            )}
+                objectFit="cover"
+              />
+            </Box>
           </VStack>
         </Box>
 

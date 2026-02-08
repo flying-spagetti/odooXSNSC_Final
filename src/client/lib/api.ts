@@ -46,6 +46,19 @@ export interface User {
   createdAt: string;
 }
 
+export interface Contact {
+  id: string;
+  userId: string;
+  name: string;
+  email: string;
+  phone?: string;
+  address?: string;
+  createdAt: string;
+  updatedAt: string;
+  user?: { id: string; email: string; name: string };
+  _count?: { subscriptions: number };
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -241,6 +254,27 @@ export const userApi = {
   
   updateProfile: (id: string, data: { name?: string; phone?: string; address?: string }) =>
     api.patch<{ user: User }>(`/admin/users/${id}/profile`, data),
+};
+
+// Contact APIs
+export const contactApi = {
+  list: (params?: { userId?: string; limit?: number; offset?: number }) =>
+    api.get<PaginatedResponse<Contact>>('/contacts', { params }),
+  
+  get: (id: string) =>
+    api.get<{ contact: Contact }>(`/contacts/${id}`),
+  
+  create: (data: { userId: string; name: string; email: string; phone?: string; address?: string }) =>
+    api.post<{ contact: Contact }>('/contacts', data),
+  
+  update: (id: string, data: { name?: string; email?: string; phone?: string; address?: string }) =>
+    api.patch<{ contact: Contact }>(`/contacts/${id}`, data),
+  
+  delete: (id: string) =>
+    api.delete<{ success: boolean }>(`/contacts/${id}`),
+  
+  getActiveSubscriptionsCount: (id: string) =>
+    api.get<{ count: number }>(`/contacts/${id}/subscriptions/count`),
 };
 
 // Product APIs

@@ -46,7 +46,7 @@ export default function PortalLayout({ children }: PortalLayoutProps) {
               onClick={onOpen}
             />
             <Link to="/portal" className="text-xl font-bold">
-              Company Logo
+              SubsManager
             </Link>
           </Flex>
 

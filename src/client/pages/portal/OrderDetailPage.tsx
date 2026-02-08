@@ -17,7 +17,7 @@ import {
   Badge,
 } from '@chakra-ui/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, RotateCcw, X } from 'lucide-react';
+import { Download, RotateCcw, X, Printer } from 'lucide-react';
 import { subscriptionApi, invoiceApi } from '@/lib/api';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -59,10 +59,75 @@ export default function OrderDetailPage() {
     },
   });
 
-  const handleDownload = () => {
-    if (id) {
-      window.open(`/api/v1/subscriptions/${id}/pdf`, '_blank');
+  const handleDownload = async () => {
+    if (!id) return;
+    
+    try {
+      // Get the auth token
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast({
+          title: 'Error',
+          description: 'Please log in to download the PDF',
+          status: 'error',
+          duration: 3000,
+        });
+        return;
+      }
+
+      // Construct the full API URL
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
+      const url = `${API_URL}/subscriptions/${id}/pdf`;
+
+      // Fetch the PDF with authentication
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to download PDF');
+      }
+
+      // Get the PDF blob
+      const blob = await response.blob();
+      
+      // Get subscription number for filename
+      const subscription = subscriptionData?.data?.subscription;
+      const filename = subscription?.subscriptionNumber 
+        ? `order-${subscription.subscriptionNumber}.pdf`
+        : `order-${id}.pdf`;
+      
+      // Create a download link
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+
+      toast({
+        title: 'Success',
+        description: 'PDF downloaded successfully',
+        status: 'success',
+        duration: 3000,
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to download PDF',
+        status: 'error',
+        duration: 5000,
+      });
     }
+  };
+
+  const handlePrint = () => {
+    window.print();
   };
 
   const handleRenew = () => {
@@ -135,6 +200,13 @@ export default function OrderDetailPage() {
             onClick={handleDownload}
           >
             Download
+          </Button>
+          <Button
+            variant="outline"
+            leftIcon={<Printer className="h-4 w-4" />}
+            onClick={handlePrint}
+          >
+            Print
           </Button>
           {!subscription.paymentDone && (
             <Button

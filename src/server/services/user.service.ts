@@ -35,22 +35,38 @@ export class UserService {
 
     const hashedPassword = await hashPassword(data.password);
 
-    return this.prisma.user.create({
-      data: {
-        email: data.email,
-        password: hashedPassword,
-        name: data.name,
-        role: data.role || 'PORTAL',
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        isActive: true,
-        createdAt: true,
-      },
+    // Create user and default contact in a transaction
+    const result = await this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          email: data.email,
+          password: hashedPassword,
+          name: data.name,
+          role: data.role || 'PORTAL',
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          isActive: true,
+          createdAt: true,
+        },
+      });
+
+      // Create default contact for the user
+      await tx.contact.create({
+        data: {
+          userId: user.id,
+          name: user.name,
+          email: user.email,
+        },
+      });
+
+      return user;
     });
+
+    return result;
   }
 
   async authenticate(data: LoginData) {
