@@ -2,9 +2,17 @@
 
 A full-stack subscription management platform built with modern web technologies. This application provides comprehensive tools for managing subscriptions, invoicing, payments, and product catalogs, with separate interfaces for administrators and customers.
 
+
+Demo Link Video : {Link}[https://drive.google.com/file/d/1LZY7Z3qPTBQ95bHW1L3weyVK27r1unWB/view?usp=sharing]
+
 ## 🎯 Overview
 
 This platform enables businesses to manage recurring subscriptions, generate invoices, track payments, and maintain a product catalog. It features a dual-interface design: an admin/internal dashboard for business operations and a customer portal for shopping and subscription management.
+
+## System Architeture
+
+<img width="1024" height="1536" alt="Architecture" src="https://github.com/user-attachments/assets/fc850f92-939f-4646-8560-707b5a493e45" />
+
 
 ## ✨ Features
 
