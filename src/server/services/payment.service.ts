@@ -4,7 +4,7 @@
  */
 
 import { PrismaClient, Payment, PaymentMethod } from '@prisma/client';
-import { NotFoundError, BusinessRuleError, InsufficientPaymentError } from '../domain/errors';
+import { NotFoundError, BusinessRuleError } from '../domain/errors';
 import { AuditService } from './audit.service';
 import { InvoiceService } from './invoice.service';
 import { isFullyPaid } from '../domain/pricing';
@@ -36,29 +36,36 @@ export class PaymentService {
     data: RecordPaymentData,
     actorUserId: string
   ): Promise<Payment> {
-    const invoice = await this.invoiceService.getById(invoiceId);
-
-    // Validate invoice is in correct status
-    if (!['CONFIRMED', 'PAID'].includes(invoice.status)) {
-      throw new BusinessRuleError('Payments can only be recorded for CONFIRMED or PAID invoices');
-    }
-
-    // Validate payment amount
+    // Validate payment amount before opening a transaction
     if (data.amount <= 0) {
       throw new BusinessRuleError('Payment amount must be greater than zero');
     }
 
-    const newPaidAmount = parseFloat(invoice.paidAmount.toString()) + data.amount;
-    const totalAmount = parseFloat(invoice.total.toString());
-
-    // Check for overpayment
-    if (newPaidAmount > totalAmount) {
-      throw new BusinessRuleError(
-        `Payment amount would exceed invoice total. Outstanding: ${totalAmount - parseFloat(invoice.paidAmount.toString())}`
-      );
-    }
-
     return this.prisma.$transaction(async (tx) => {
+      const invoice = await tx.invoice.findUnique({
+        where: { id: invoiceId },
+      });
+
+      if (!invoice) {
+        throw new NotFoundError('Invoice', invoiceId);
+      }
+
+      // Validate invoice is in correct status
+      if (!['CONFIRMED', 'PAID'].includes(invoice.status)) {
+        throw new BusinessRuleError('Payments can only be recorded for CONFIRMED or PAID invoices');
+      }
+
+      const currentPaidAmount = parseFloat(invoice.paidAmount.toString());
+      const totalAmount = parseFloat(invoice.total.toString());
+      const newPaidAmount = currentPaidAmount + data.amount;
+
+      // Check for overpayment using latest invoice values inside transaction
+      if (newPaidAmount > totalAmount) {
+        throw new BusinessRuleError(
+          `Payment amount would exceed invoice total. Outstanding: ${totalAmount - currentPaidAmount}`
+        );
+      }
+
       // Create payment record
       const payment = await tx.payment.create({
         data: {
